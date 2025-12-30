@@ -13,6 +13,9 @@ class MedicationModel {
   final int? lowSupplyThreshold;
   final double? costPerUnit;
   final String? currency;
+  final int frequency; // times per day (1, 2, 3, 4)
+  final String firstDoseTime; // HH:mm format
+  final List<String> scheduleTimes; // calculated times
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -30,18 +33,61 @@ class MedicationModel {
     this.lowSupplyThreshold,
     this.costPerUnit,
     this.currency,
+    this.frequency = 1,
+    this.firstDoseTime = '08:00',
+    this.scheduleTimes = const ['8:00 AM'],
     required this.createdAt,
     required this.updatedAt,
   });
 
+  // Calculate schedule times based on frequency and first dose
+  static List<String> calculateScheduleTimes(String firstTime, int frequency) {
+    final times = <String>[_formatTime(firstTime)];
+    if (frequency <= 1) return times;
+    
+    final parts = firstTime.split(':');
+    final hours = int.parse(parts[0]);
+    final minutes = int.parse(parts[1]);
+    final intervalHours = 24 ~/ frequency;
+    
+    for (var i = 1; i < frequency; i++) {
+      var newHours = (hours + (intervalHours * i)) % 24;
+      final period = newHours >= 12 ? 'PM' : 'AM';
+      final displayHours = newHours > 12 ? newHours - 12 : (newHours == 0 ? 12 : newHours);
+      times.add('$displayHours:${minutes.toString().padLeft(2, '0')} $period');
+    }
+    return times;
+  }
+
+  static String _formatTime(String time) {
+    final parts = time.split(':');
+    final hours = int.parse(parts[0]);
+    final minutes = int.parse(parts[1]);
+    final period = hours >= 12 ? 'PM' : 'AM';
+    final displayHours = hours > 12 ? hours - 12 : (hours == 0 ? 12 : hours);
+    return '$displayHours:${minutes.toString().padLeft(2, '0')} $period';
+  }
+
+  // Get droplet count from dosage
+  int get dropletCount {
+    final match = RegExp(r'(\d+)\s*droplet', caseSensitive: false).firstMatch(dosage);
+    return match != null ? int.parse(match.group(1)!) : 1;
+  }
+
   factory MedicationModel.fromJson(Map<String, dynamic> json) {
+    final frequency = json['frequency'] as int? ?? 1;
+    final firstDoseTime = json['firstDoseTime'] as String? ?? '08:00';
+    final scheduleTimes = json['scheduleTimes'] != null 
+        ? List<String>.from(json['scheduleTimes'])
+        : calculateScheduleTimes(firstDoseTime, frequency);
+
     return MedicationModel(
       id: json['id'] as String,
       userId: json['userId'] as String,
       name: json['name'] as String,
       genericName: json['genericName'] as String?,
       dosage: json['dosage'] as String,
-      form: json['form'] as String,
+      form: json['form'] as String? ?? 'drops',
       instructions: json['instructions'] as String?,
       isCritical: json['isCritical'] as bool? ?? false,
       isActive: json['isActive'] as bool? ?? true,
@@ -49,6 +95,9 @@ class MedicationModel {
       lowSupplyThreshold: json['lowSupplyThreshold'] as int?,
       costPerUnit: (json['costPerUnit'] as num?)?.toDouble(),
       currency: json['currency'] as String?,
+      frequency: frequency,
+      firstDoseTime: firstDoseTime,
+      scheduleTimes: scheduleTimes,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -69,6 +118,9 @@ class MedicationModel {
       'lowSupplyThreshold': lowSupplyThreshold,
       'costPerUnit': costPerUnit,
       'currency': currency,
+      'frequency': frequency,
+      'firstDoseTime': firstDoseTime,
+      'scheduleTimes': scheduleTimes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -88,6 +140,9 @@ class MedicationModel {
     int? lowSupplyThreshold,
     double? costPerUnit,
     String? currency,
+    int? frequency,
+    String? firstDoseTime,
+    List<String>? scheduleTimes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -105,6 +160,9 @@ class MedicationModel {
       lowSupplyThreshold: lowSupplyThreshold ?? this.lowSupplyThreshold,
       costPerUnit: costPerUnit ?? this.costPerUnit,
       currency: currency ?? this.currency,
+      frequency: frequency ?? this.frequency,
+      firstDoseTime: firstDoseTime ?? this.firstDoseTime,
+      scheduleTimes: scheduleTimes ?? this.scheduleTimes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -22,6 +22,12 @@ class MedicationCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: medication.isCritical 
+            ? const BorderSide(color: Colors.red, width: 2)
+            : BorderSide.none,
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -32,22 +38,19 @@ class MedicationCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  // Medication icon
+                  // Droplet icon
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: medication.isCritical
                           ? Colors.red.shade100
-                          : theme.colorScheme.primaryContainer,
+                          : Colors.blue.shade100,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      _getMedicationIcon(medication.form),
-                      color: medication.isCritical
-                          ? Colors.red
-                          : theme.colorScheme.primary,
+                      Icons.water_drop,
+                      color: medication.isCritical ? Colors.red : Colors.blue,
                       size: 28,
-                      semanticLabel: medication.form,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -67,31 +70,70 @@ class MedicationCard extends StatelessWidget {
                               ),
                             ),
                             if (medication.isCritical)
-                              Tooltip(
-                                message: 'Critical medication',
-                                child: Icon(
-                                  Icons.warning_amber_rounded,
-                                  color: Colors.red,
-                                  size: 20,
-                                  semanticLabel: 'Critical medication',
-                                ),
-                              ),
+                              const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '${medication.dosage} • ${medication.form}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                        // Droplets display
+                        Row(
+                          children: [
+                            ...List.generate(
+                              medication.dropletCount.clamp(0, 5),
+                              (_) => const Icon(Icons.water_drop, color: Colors.blue, size: 16),
+                            ),
+                            if (medication.dropletCount > 5)
+                              Text(' +${medication.dropletCount - 5}', 
+                                style: const TextStyle(color: Colors.blue, fontSize: 12)),
+                            const SizedBox(width: 8),
+                            Text(
+                              '(${medication.dosage})',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              if (medication.instructions != null) ...[
+              
+              // Schedule times
+              if (medication.scheduleTimes.isNotEmpty) ...[
                 const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.schedule, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: medication.scheduleTimes.map((time) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            time,
+                            style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
+                          ),
+                        )).toList(),
+                      ),
+                    ),
+                    if (medication.frequency > 1)
+                      Text(
+                        '${medication.frequency}x/day',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      ),
+                  ],
+                ),
+              ],
+              
+              if (medication.instructions != null) ...[
+                const SizedBox(height: 8),
                 Text(
                   medication.instructions!,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -101,13 +143,14 @@ class MedicationCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+              
               // Supply indicator
               if (medication.currentSupply != null) ...[
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     Icon(
-                      Icons.inventory_2_outlined,
+                      Icons.water_drop_outlined,
                       size: 16,
                       color: isLowSupply ? Colors.orange : theme.colorScheme.onSurfaceVariant,
                     ),
@@ -138,6 +181,7 @@ class MedicationCard extends StatelessWidget {
                   ],
                 ),
               ],
+              
               // Take dose button
               if (onTakeDose != null) ...[
                 const SizedBox(height: 12),
@@ -148,8 +192,8 @@ class MedicationCard extends StatelessWidget {
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text('Take Dose'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
                     ),
                   ),
                 ),
@@ -159,31 +203,5 @@ class MedicationCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  IconData _getMedicationIcon(String form) {
-    switch (form.toLowerCase()) {
-      case 'tablet':
-      case 'pill':
-        return Icons.medication;
-      case 'capsule':
-        return Icons.medication_outlined;
-      case 'liquid':
-      case 'syrup':
-        return Icons.local_drink;
-      case 'injection':
-        return Icons.vaccines;
-      case 'inhaler':
-        return Icons.air;
-      case 'cream':
-      case 'ointment':
-        return Icons.spa;
-      case 'drops':
-        return Icons.water_drop;
-      case 'patch':
-        return Icons.healing;
-      default:
-        return Icons.medication;
-    }
   }
 }

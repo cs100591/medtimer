@@ -26,11 +26,6 @@ class MedicationsPage extends ConsumerWidget {
         title: const Text('My Medications'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => _showSearch(context),
-            tooltip: 'Search medications',
-          ),
-          IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: () => _showFilters(context),
             tooltip: 'Filter',
@@ -87,34 +82,23 @@ class MedicationsPage extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.medication_outlined,
-            size: 80,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.water_drop_outlined, size: 80, color: Colors.blue.shade300),
           const SizedBox(height: 16),
           Text(
             'No medications yet',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+              color: Colors.grey.shade600,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Add your first medication to get started',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade500,
-                ),
+              color: Colors.grey.shade500,
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  void _showSearch(BuildContext context) {
-    showSearch(
-      context: context,
-      delegate: MedicationSearchDelegate(),
     );
   }
 
@@ -136,7 +120,7 @@ class MedicationsPage extends ConsumerWidget {
               onTap: () => Navigator.pop(ctx),
             ),
             ListTile(
-              leading: const Icon(Icons.inventory_2, color: Colors.orange),
+              leading: const Icon(Icons.water_drop, color: Colors.orange),
               title: const Text('Low supply'),
               onTap: () => Navigator.pop(ctx),
             ),
@@ -167,36 +151,6 @@ class MedicationsPage extends ConsumerWidget {
   }
 }
 
-class MedicationSearchDelegate extends SearchDelegate<String> {
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: () => query = '',
-      ),
-    ];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back),
-      onPressed: () => close(context, ''),
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return Center(child: Text('Results for: $query'));
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return const Center(child: Text('Type to search medications'));
-  }
-}
-
 class MedicationDetailsPage extends ConsumerWidget {
   final MedicationModel medication;
 
@@ -210,11 +164,6 @@ class MedicationDetailsPage extends ConsumerWidget {
       appBar: AppBar(
         title: Text(medication.name),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {},
-            tooltip: 'Edit',
-          ),
           IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () => _confirmDelete(context, ref),
@@ -231,9 +180,9 @@ class MedicationDetailsPage extends ConsumerWidget {
               child: Column(
                 children: [
                   Icon(
-                    Icons.medication,
+                    Icons.water_drop,
                     size: 64,
-                    color: medication.isCritical ? Colors.red : theme.colorScheme.primary,
+                    color: medication.isCritical ? Colors.red : Colors.blue,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -242,43 +191,62 @@ class MedicationDetailsPage extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (medication.genericName != null)
-                    Text(
-                      medication.genericName!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
                   const SizedBox(height: 8),
-                  Chip(
-                    label: Text('${medication.dosage} ${medication.form}'),
+                  // Droplets display
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ...List.generate(
+                        medication.dropletCount.clamp(0, 5),
+                        (_) => const Icon(Icons.water_drop, color: Colors.blue, size: 24),
+                      ),
+                      if (medication.dropletCount > 5)
+                        Text(' +${medication.dropletCount - 5}', style: const TextStyle(color: Colors.blue)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(medication.dosage, style: theme.textTheme.bodyMedium),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Schedule times
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Text('Schedule', style: theme.textTheme.titleMedium),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text('${medication.frequency}x daily', style: theme.textTheme.bodyLarge),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: medication.scheduleTimes.map((time) => Chip(
+                      avatar: const Icon(Icons.access_time, size: 16),
+                      label: Text(time),
+                      backgroundColor: Colors.blue.shade50,
+                    )).toList(),
                   ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
+          
           _buildDetailRow(context, 'Instructions', medication.instructions ?? 'None'),
-          _buildDetailRow(context, 'Supply', '${medication.currentSupply ?? 0} remaining'),
-          _buildDetailRow(context, 'Critical', medication.isCritical ? 'Yes' : 'No'),
-          if (medication.costPerUnit != null)
-            _buildDetailRow(
-              context,
-              'Cost',
-              '${medication.currency ?? '\$'}${medication.costPerUnit!.toStringAsFixed(2)} per unit',
-            ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.schedule),
-            label: const Text('View Schedule'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.history),
-            label: const Text('View History'),
-          ),
+          _buildDetailRow(context, 'Supply', '${medication.currentSupply ?? 0} droplets remaining'),
+          _buildDetailRow(context, 'Critical', medication.isCritical ? 'Yes ⚠️' : 'No'),
         ],
       ),
     );
@@ -295,15 +263,12 @@ class MedicationDetailsPage extends ConsumerWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),
@@ -362,24 +327,27 @@ class AddMedicationPage extends ConsumerStatefulWidget {
 class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _genericNameController = TextEditingController();
-  final _dosageController = TextEditingController();
   final _instructionsController = TextEditingController();
-  final _supplyController = TextEditingController();
-  String _selectedForm = 'Tablet';
+  
+  int _droplets = 1;
+  int _frequency = 1;
+  TimeOfDay _firstDoseTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isCritical = false;
   bool _isLoading = false;
-
-  final _forms = ['Tablet', 'Capsule', 'Liquid', 'Injection', 'Inhaler', 'Cream', 'Drops', 'Patch'];
 
   @override
   void dispose() {
     _nameController.dispose();
-    _genericNameController.dispose();
-    _dosageController.dispose();
     _instructionsController.dispose();
-    _supplyController.dispose();
     super.dispose();
+  }
+
+  String get _firstDoseTimeString {
+    return '${_firstDoseTime.hour.toString().padLeft(2, '0')}:${_firstDoseTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  List<String> get _scheduleTimes {
+    return MedicationModel.calculateScheduleTimes(_firstDoseTimeString, _frequency);
   }
 
   @override
@@ -387,99 +355,187 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Medication'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () {},
-            tooltip: 'Scan barcode',
-          ),
-        ],
       ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Name
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Medication Name *',
                 hintText: 'e.g., Lisinopril',
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.water_drop),
               ),
               validator: (v) => v?.isEmpty == true ? 'Required' : null,
               textCapitalization: TextCapitalization.words,
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _genericNameController,
-              decoration: const InputDecoration(
-                labelText: 'Generic Name (optional)',
-                hintText: 'e.g., Lisinopril',
-                border: OutlineInputBorder(),
-              ),
-              textCapitalization: TextCapitalization.words,
+            const SizedBox(height: 24),
+            
+            // Droplets
+            Text('💧 Droplets per dose', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    value: _droplets.toDouble(),
+                    min: 1,
+                    max: 10,
+                    divisions: 9,
+                    label: '$_droplets',
+                    onChanged: (v) => setState(() => _droplets = v.round()),
+                  ),
+                ),
+                Container(
+                  width: 80,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('$_droplets', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.water_drop, color: Colors.blue, size: 20),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _dosageController,
-              decoration: const InputDecoration(
-                labelText: 'Dosage *',
-                hintText: 'e.g., 10mg',
-                border: OutlineInputBorder(),
+            const SizedBox(height: 24),
+            
+            // First dose time
+            Text('⏰ First dose time', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () async {
+                final time = await showTimePicker(
+                  context: context,
+                  initialTime: _firstDoseTime,
+                );
+                if (time != null) {
+                  setState(() => _firstDoseTime = time);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.access_time, color: Colors.blue),
+                    const SizedBox(width: 12),
+                    Text(
+                      _firstDoseTime.format(context),
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.edit, color: Colors.grey),
+                  ],
+                ),
               ),
-              validator: (v) => v?.isEmpty == true ? 'Required' : null,
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedForm,
-              decoration: const InputDecoration(
-                labelText: 'Form',
-                border: OutlineInputBorder(),
+            const SizedBox(height: 24),
+            
+            // Frequency
+            Text('📅 Frequency per day', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Row(
+              children: [1, 2, 3, 4].map((freq) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: ChoiceChip(
+                    label: Text('${freq}x'),
+                    selected: _frequency == freq,
+                    onSelected: (selected) {
+                      if (selected) setState(() => _frequency = freq);
+                    },
+                    selectedColor: Colors.blue.shade100,
+                  ),
+                ),
+              )).toList(),
+            ),
+            const SizedBox(height: 12),
+            
+            // Schedule preview
+            if (_frequency > 0)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Scheduled times:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _scheduleTimes.map((time) => Chip(
+                        avatar: const Icon(Icons.access_time, size: 16),
+                        label: Text(time),
+                        backgroundColor: Colors.white,
+                      )).toList(),
+                    ),
+                    if (_frequency > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          '(Every ${24 ~/ _frequency} hours)',
+                          style: TextStyle(color: Colors.blue.shade700, fontSize: 12),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              items: _forms.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-              onChanged: (v) => setState(() => _selectedForm = v!),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            
+            // Instructions
             TextFormField(
               controller: _instructionsController,
               decoration: const InputDecoration(
-                labelText: 'Instructions',
+                labelText: 'Instructions (optional)',
                 hintText: 'e.g., Take with food',
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _supplyController,
-              decoration: const InputDecoration(
-                labelText: 'Current Supply (optional)',
-                hintText: 'e.g., 30',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
+            
+            // Critical
             SwitchListTile(
-              title: const Text('Critical Medication'),
-              subtitle: const Text('Mark as critical for emergency access'),
+              title: const Text('⚠️ Critical Medication'),
+              subtitle: const Text('Mark for emergency access'),
               value: _isCritical,
               onChanged: (v) => setState(() => _isCritical = v),
             ),
             const SizedBox(height: 24),
+            
+            // Save button
             ElevatedButton(
               onPressed: _isLoading ? null : _saveMedication,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
               ),
               child: _isLoading
                   ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text('Save Medication'),
+                  : const Text('Save Medication', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),
@@ -497,19 +553,17 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
         id: const Uuid().v4(),
         userId: widget.userId,
         name: _nameController.text.trim(),
-        genericName: _genericNameController.text.trim().isNotEmpty 
-            ? _genericNameController.text.trim() 
-            : null,
-        dosage: _dosageController.text.trim(),
-        form: _selectedForm,
+        dosage: '$_droplets droplet${_droplets > 1 ? 's' : ''}',
+        form: 'drops',
         instructions: _instructionsController.text.trim().isNotEmpty 
             ? _instructionsController.text.trim() 
             : null,
         isCritical: _isCritical,
-        currentSupply: _supplyController.text.isNotEmpty 
-            ? int.tryParse(_supplyController.text) 
-            : null,
+        currentSupply: 30,
         lowSupplyThreshold: 7,
+        frequency: _frequency,
+        firstDoseTime: _firstDoseTimeString,
+        scheduleTimes: _scheduleTimes,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

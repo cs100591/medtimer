@@ -5,28 +5,60 @@ import { Card, CardTitle, CardContent } from '../components/ui/Card';
 import type { Medication } from '../types';
 import api from '../services/api';
 
+// Helper to calculate schedule times based on frequency and first dose time
+function calculateScheduleTimes(firstTime: string, frequency: number): string[] {
+  const times: string[] = [firstTime];
+  if (frequency <= 1) return times;
+  
+  const [hours, minutes] = firstTime.split(':').map(Number);
+  const intervalHours = Math.floor(24 / frequency);
+  
+  for (let i = 1; i < frequency; i++) {
+    let newHours = (hours + (intervalHours * i)) % 24;
+    const period = newHours >= 12 ? 'PM' : 'AM';
+    const displayHours = newHours > 12 ? newHours - 12 : (newHours === 0 ? 12 : newHours);
+    times.push(`${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`);
+  }
+  return times;
+}
+
+// Format time for display
+function formatTimeDisplay(time: string): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
 // Sample data for demo
 const sampleMedications: Medication[] = [
-  { id: 'm1', userId: 'demo', name: 'Lisinopril', dosage: '10mg', form: 'tablet', instructions: 'Take once daily with food', isCritical: true, isActive: true, currentSupply: 25, lowSupplyThreshold: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'm2', userId: 'demo', name: 'Metformin', dosage: '500mg', form: 'tablet', instructions: 'Take twice daily with meals', isCritical: false, isActive: true, currentSupply: 45, lowSupplyThreshold: 10, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'm3', userId: 'demo', name: 'Aspirin', dosage: '81mg', form: 'tablet', instructions: 'Take once daily', isCritical: false, isActive: true, currentSupply: 5, lowSupplyThreshold: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'm1', userId: 'demo', name: 'Lisinopril', dosage: '2 droplets', form: 'drops', instructions: 'Take once daily in the morning', isCritical: true, isActive: true, currentSupply: 25, lowSupplyThreshold: 7, frequency: 1, firstDoseTime: '08:00', scheduleTimes: ['8:00 AM'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'm2', userId: 'demo', name: 'Metformin', dosage: '3 droplets', form: 'drops', instructions: 'Take with meals', isCritical: false, isActive: true, currentSupply: 60, lowSupplyThreshold: 10, frequency: 2, firstDoseTime: '08:00', scheduleTimes: ['8:00 AM', '8:00 PM'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'm3', userId: 'demo', name: 'Aspirin', dosage: '1 droplet', form: 'drops', instructions: 'Take daily for heart health', isCritical: false, isActive: true, currentSupply: 5, lowSupplyThreshold: 7, frequency: 1, firstDoseTime: '09:00', scheduleTimes: ['9:00 AM'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
 
 export function MedicationsPage() {
   const [medications, setMedications] = useState<Medication[]>(() => {
     const saved = localStorage.getItem('medications');
-    return saved ? JSON.parse(saved) : sampleMedications;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return sampleMedications;
+      }
+    }
+    return sampleMedications;
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'critical' | 'lowSupply'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMed, setNewMed] = useState({
     name: '',
-    dosage: '',
-    form: 'tablet',
+    droplets: 1,
     instructions: '',
     isCritical: false,
+    frequency: 1,
+    firstDoseTime: '08:00',
   });
 
   // Save to localStorage whenever medications change
@@ -53,22 +85,27 @@ export function MedicationsPage() {
   };
 
   const handleAddMedication = async () => {
-    if (!newMed.name || !newMed.dosage) {
-      alert('Please fill in name and dosage');
+    if (!newMed.name) {
+      alert('Please fill in medication name');
       return;
     }
 
+    const scheduleTimes = calculateScheduleTimes(newMed.firstDoseTime, newMed.frequency);
+    
     const newMedication: Medication = {
       id: `m${Date.now()}`,
       userId: 'demo',
       name: newMed.name,
-      dosage: newMed.dosage,
-      form: newMed.form as Medication['form'],
+      dosage: `${newMed.droplets} droplet${newMed.droplets > 1 ? 's' : ''}`,
+      form: 'drops',
       instructions: newMed.instructions,
       isCritical: newMed.isCritical,
       isActive: true,
       currentSupply: 30,
       lowSupplyThreshold: 7,
+      frequency: newMed.frequency,
+      firstDoseTime: newMed.firstDoseTime,
+      scheduleTimes: scheduleTimes,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -76,7 +113,7 @@ export function MedicationsPage() {
     // Add locally first
     setMedications(prev => [...prev, newMedication]);
     setShowAddForm(false);
-    setNewMed({ name: '', dosage: '', form: 'tablet', instructions: '', isCritical: false });
+    setNewMed({ name: '', droplets: 1, instructions: '', isCritical: false, frequency: 1, firstDoseTime: '08:00' });
 
     // Try API call
     try {
@@ -88,10 +125,7 @@ export function MedicationsPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this medication?')) {
-      // Delete locally first
       setMedications(prev => prev.filter(m => m.id !== id));
-
-      // Try API call
       try {
         await api.deleteMedication(id);
       } catch (err) {
@@ -139,41 +173,76 @@ export function MedicationsPage() {
                 placeholder="e.g., Lisinopril"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium mb-1">Dosage *</label>
+              <label className="block text-sm font-medium mb-1">💧 Droplets per dose</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={newMed.droplets}
+                  onChange={(e) => setNewMed({ ...newMed, droplets: parseInt(e.target.value) })}
+                  className="flex-1"
+                />
+                <span className="text-lg font-semibold w-20 text-center">
+                  {newMed.droplets} 💧
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">⏰ First dose time</label>
               <input
-                type="text"
-                value={newMed.dosage}
-                onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })}
+                type="time"
+                value={newMed.firstDoseTime}
+                onChange={(e) => setNewMed({ ...newMed, firstDoseTime: e.target.value })}
                 className="w-full border rounded-lg px-3 py-2"
-                placeholder="e.g., 10mg"
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium mb-1">Form</label>
-              <select
-                value={newMed.form}
-                onChange={(e) => setNewMed({ ...newMed, form: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2"
-              >
-                <option value="tablet">Tablet</option>
-                <option value="capsule">Capsule</option>
-                <option value="liquid">Liquid</option>
-                <option value="injection">Injection</option>
-                <option value="inhaler">Inhaler</option>
-                <option value="patch">Patch</option>
-              </select>
+              <label className="block text-sm font-medium mb-1">📅 Frequency per day</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 2, 3, 4].map((freq) => (
+                  <button
+                    key={freq}
+                    type="button"
+                    onClick={() => setNewMed({ ...newMed, frequency: freq })}
+                    className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                      newMed.frequency === freq 
+                        ? 'bg-blue-100 border-blue-500 text-blue-700' 
+                        : 'bg-white border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {freq}x daily
+                  </button>
+                ))}
+              </div>
+              {newMed.frequency > 1 && (
+                <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-700 font-medium">Scheduled times:</p>
+                  <p className="text-sm text-blue-600">
+                    {calculateScheduleTimes(newMed.firstDoseTime, newMed.frequency).join(' → ')}
+                  </p>
+                  <p className="text-xs text-blue-500 mt-1">
+                    (Every {Math.floor(24 / newMed.frequency)} hours)
+                  </p>
+                </div>
+              )}
             </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">Instructions</label>
               <textarea
                 value={newMed.instructions}
                 onChange={(e) => setNewMed({ ...newMed, instructions: e.target.value })}
                 className="w-full border rounded-lg px-3 py-2"
-                placeholder="e.g., Take once daily with food"
+                placeholder="e.g., Take with food"
                 rows={2}
               />
             </div>
+            
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -181,8 +250,9 @@ export function MedicationsPage() {
                 onChange={(e) => setNewMed({ ...newMed, isCritical: e.target.checked })}
                 className="w-4 h-4"
               />
-              <label className="text-sm">Mark as critical medication</label>
+              <label className="text-sm">⚠️ Mark as critical medication</label>
             </div>
+            
             <div className="flex gap-2">
               <Button onClick={handleAddMedication}>Save Medication</Button>
               <Button variant="secondary" onClick={() => setShowAddForm(false)}>Cancel</Button>
@@ -201,14 +271,12 @@ export function MedicationsPage() {
               filter === f ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            {f === 'all' ? 'All' : f === 'critical' ? '⚠️ Critical' : '📦 Low Supply'}
+            {f === 'all' ? 'All' : f === 'critical' ? '⚠️ Critical' : '💧 Low Supply'}
           </button>
         ))}
       </div>
 
-      {/* Loading/Error States */}
       {loading && <p className="text-gray-500">Loading medications...</p>}
-      {error && <p className="text-red-500">{error}</p>}
 
       {/* Medication List */}
       <div className="space-y-4">
