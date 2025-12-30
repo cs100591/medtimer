@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/models/medication_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/medication_provider.dart';
 import '../widgets/reminder_card.dart';

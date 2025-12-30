@@ -151,39 +151,6 @@ class MedicationCard extends StatelessWidget {
                 ),
               ],
               
-              // Duration indicator
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: medication.isOngoing ? Colors.green.shade100 : Colors.orange.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          medication.isOngoing ? Icons.all_inclusive : Icons.calendar_today,
-                          size: 14,
-                          color: medication.isOngoing ? Colors.green.shade700 : Colors.orange.shade700,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          medication.isOngoing ? 'Ongoing' : medication.duration,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: medication.isOngoing ? Colors.green.shade700 : Colors.orange.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              
               // Take dose button
               if (onTakeDose != null) ...[
                 const SizedBox(height: 12),
