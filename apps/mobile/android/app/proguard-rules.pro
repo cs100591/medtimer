@@ -18,3 +18,8 @@
 -keepclasseswithmembernames class * {
     native <methods>;
 }
+
+# Google Play Core (missing classes fix)
+-dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
