@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Medication } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -46,23 +45,25 @@ export function MedicationCard({ medication, onTakeDose, onClick, onDelete }: Me
           )}
         </div>
       </div>
-      <div className="mt-4 pt-4 border-t flex gap-2">
-        {onTakeDose && (
-          <Button onClick={(e) => { e.stopPropagation(); onTakeDose(); }} className="flex-1">
-            ✓ Take Dose
-          </Button>
-        )}
-        {onDelete && (
-          <Button variant="danger" onClick={(e) => { e.stopPropagation(); onDelete(); }} className={onTakeDose ? '' : 'w-full'}>
-            🗑️ Delete
-          </Button>
-        )}
-      </div>
+      {(onTakeDose || onDelete) && (
+        <div className="mt-4 pt-4 border-t flex gap-2">
+          {onTakeDose && (
+            <Button onClick={(e) => { e.stopPropagation(); onTakeDose(); }} className="flex-1">
+              ✓ Take Dose
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="danger" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+              🗑️ Delete
+            </Button>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
 
-function MedicationIcon({ form, critical }: { form: string; critical: boolean }) {
+function MedicationIcon({ form, critical }: { form: string; critical?: boolean }) {
   const color = critical ? 'text-red-600' : 'text-blue-600';
   const icons: Record<string, string> = {
     tablet: '💊', capsule: '💊', liquid: '🧴', injection: '💉',

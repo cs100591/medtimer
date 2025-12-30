@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { MedicationCard } from '../components/MedicationCard';
 import { Button } from '../components/ui/Button';
 import { Card, CardTitle, CardContent } from '../components/ui/Card';
-import type { RootState } from '../store';
+import type { Medication } from '../types';
 import api from '../services/api';
 
+// Sample data for demo
+const sampleMedications: Medication[] = [
+  { id: 'm1', userId: 'demo', name: 'Lisinopril', dosage: '10mg', form: 'tablet', instructions: 'Take once daily with food', isCritical: true, isActive: true, currentSupply: 25, lowSupplyThreshold: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'm2', userId: 'demo', name: 'Metformin', dosage: '500mg', form: 'tablet', instructions: 'Take twice daily with meals', isCritical: false, isActive: true, currentSupply: 45, lowSupplyThreshold: 10, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'm3', userId: 'demo', name: 'Aspirin', dosage: '81mg', form: 'tablet', instructions: 'Take once daily', isCritical: false, isActive: true, currentSupply: 5, lowSupplyThreshold: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+];
+
 export function MedicationsPage() {
-  const { medications, loading, error } = useSelector((state: RootState) => state.medications);
+  const [medications, setMedications] = useState<Medication[]>(() => {
+    const saved = localStorage.getItem('medications');
+    return saved ? JSON.parse(saved) : sampleMedications;
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'critical' | 'lowSupply'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMed, setNewMed] = useState({
@@ -18,18 +29,26 @@ export function MedicationsPage() {
     isCritical: false,
   });
 
+  // Save to localStorage whenever medications change
+  useEffect(() => {
+    localStorage.setItem('medications', JSON.stringify(medications));
+  }, [medications]);
+
   useEffect(() => {
     loadMedications();
   }, []);
 
   const loadMedications = async () => {
+    setLoading(true);
     try {
       const response = await api.getMedications();
-      if (response.data) {
-        // Update store with fetched medications
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+        setMedications(response.data);
       }
     } catch (err) {
-      console.error('Failed to load medications:', err);
+      console.log('Using local medications');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,36 +58,57 @@ export function MedicationsPage() {
       return;
     }
 
+    const newMedication: Medication = {
+      id: `m${Date.now()}`,
+      userId: 'demo',
+      name: newMed.name,
+      dosage: newMed.dosage,
+      form: newMed.form as Medication['form'],
+      instructions: newMed.instructions,
+      isCritical: newMed.isCritical,
+      isActive: true,
+      currentSupply: 30,
+      lowSupplyThreshold: 7,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Add locally first
+    setMedications(prev => [...prev, newMedication]);
+    setShowAddForm(false);
+    setNewMed({ name: '', dosage: '', form: 'tablet', instructions: '', isCritical: false });
+
+    // Try API call
     try {
-      const response = await api.createMedication({
-        ...newMed,
-        userId: 'current-user',
-        isActive: true,
-        currentSupply: 30,
-        lowSupplyThreshold: 7,
-      });
-      
-      if (response.data) {
-        setShowAddForm(false);
-        setNewMed({ name: '', dosage: '', form: 'tablet', instructions: '', isCritical: false });
-        loadMedications();
-      } else {
-        alert(response.error || 'Failed to add medication');
-      }
+      await api.createMedication(newMedication);
     } catch (err) {
-      alert('Failed to add medication');
+      console.log('Saved locally');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this medication?')) {
+      // Delete locally first
+      setMedications(prev => prev.filter(m => m.id !== id));
+
+      // Try API call
       try {
         await api.deleteMedication(id);
-        loadMedications();
       } catch (err) {
-        alert('Failed to delete medication');
+        console.log('Deleted locally');
       }
     }
+  };
+
+  const handleTakeDose = (id: string) => {
+    setMedications(prev => 
+      prev.map(m => {
+        if (m.id === id && m.currentSupply !== undefined && m.currentSupply > 0) {
+          return { ...m, currentSupply: m.currentSupply - 1 };
+        }
+        return m;
+      })
+    );
   };
 
   const filteredMeds = medications.filter(m => {
@@ -183,7 +223,7 @@ export function MedicationsPage() {
             <MedicationCard 
               key={med.id} 
               medication={med} 
-              onClick={() => console.log('View', med.id)}
+              onTakeDose={() => handleTakeDose(med.id)}
               onDelete={() => handleDelete(med.id)}
             />
           ))
