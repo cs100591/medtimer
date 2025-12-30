@@ -10,19 +10,21 @@ interface MedicationCardProps {
 }
 
 export function MedicationCard({ medication, onTakeDose, onClick, onDelete }: MedicationCardProps) {
-  const isLowSupply = medication.currentSupply !== undefined && 
-    medication.lowSupplyThreshold !== undefined &&
-    medication.currentSupply <= medication.lowSupplyThreshold;
-
-  // Extract droplet count from dosage
-  const dropletMatch = medication.dosage.match(/(\d+)\s*droplet/i);
-  const dropletCount = dropletMatch ? parseInt(dropletMatch[1]) : 1;
+  // Extract dosage amount and unit from dosage string
+  const tabletMatch = medication.dosage.match(/(\d+)\s*tablet/i);
+  const mlMatch = medication.dosage.match(/(\d+)\s*ml/i);
+  const dosageAmount = tabletMatch ? parseInt(tabletMatch[1]) : (mlMatch ? parseInt(mlMatch[1]) : 1);
+  const isTablet = tabletMatch !== null;
+  const isMl = mlMatch !== null;
+  
+  // Check if ongoing or fixed duration
+  const isOngoing = medication.duration === 'ongoing';
 
   return (
     <Card className={medication.isCritical ? 'border-l-4 border-red-500' : ''} onClick={onClick}>
       <div className="flex items-start gap-4">
         <div className={`p-3 rounded-lg ${medication.isCritical ? 'bg-red-100' : 'bg-blue-100'}`}>
-          <span className="text-2xl">💧</span>
+          <span className="text-2xl">{isTablet ? '💊' : '💧'}</span>
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -32,12 +34,20 @@ export function MedicationCard({ medication, onTakeDose, onClick, onDelete }: Me
             )}
           </div>
           
-          {/* Droplets display */}
+          {/* Dosage display */}
           <div className="flex items-center gap-1 mt-1">
-            {Array.from({ length: Math.min(dropletCount, 5) }).map((_, i) => (
-              <span key={i} className="text-blue-500">💧</span>
-            ))}
-            {dropletCount > 5 && <span className="text-sm text-gray-500">+{dropletCount - 5}</span>}
+            {isTablet ? (
+              <>
+                {Array.from({ length: Math.min(dosageAmount, 5) }).map((_, i) => (
+                  <span key={i} className="text-blue-500">💊</span>
+                ))}
+                {dosageAmount > 5 && <span className="text-sm text-gray-500">+{dosageAmount - 5}</span>}
+              </>
+            ) : isMl ? (
+              <span className="text-blue-500 font-medium">{dosageAmount} ml 💧</span>
+            ) : (
+              <span className="text-blue-500">{medication.dosage}</span>
+            )}
             <span className="text-sm text-gray-600 ml-1">({medication.dosage})</span>
           </div>
 
@@ -62,18 +72,18 @@ export function MedicationCard({ medication, onTakeDose, onClick, onDelete }: Me
             <p className="text-sm text-gray-500 mt-2">{medication.instructions}</p>
           )}
           
-          {medication.currentSupply !== undefined && (
-            <div className="flex items-center gap-2 mt-2">
-              <span className={`text-sm ${isLowSupply ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
-                💧 {medication.currentSupply} remaining
+          {/* Duration display */}
+          <div className="flex items-center gap-2 mt-2">
+            {isOngoing ? (
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                ♾️ Ongoing
               </span>
-              {isLowSupply && (
-                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
-                  Low supply
-                </span>
-              )}
-            </div>
-          )}
+            ) : (
+              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                📅 {medication.duration}
+              </span>
+            )}
+          </div>
         </div>
       </div>
       {(onTakeDose || onDelete) && (

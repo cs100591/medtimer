@@ -180,7 +180,7 @@ class MedicationDetailsPage extends ConsumerWidget {
               child: Column(
                 children: [
                   Icon(
-                    Icons.water_drop,
+                    medication.isTablet ? Icons.medication : Icons.water_drop,
                     size: 64,
                     color: medication.isCritical ? Colors.red : Colors.blue,
                   ),
@@ -192,16 +192,23 @@ class MedicationDetailsPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Droplets display
+                  // Dosage display
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      ...List.generate(
-                        medication.dropletCount.clamp(0, 5),
-                        (_) => const Icon(Icons.water_drop, color: Colors.blue, size: 24),
-                      ),
-                      if (medication.dropletCount > 5)
-                        Text(' +${medication.dropletCount - 5}', style: const TextStyle(color: Colors.blue)),
+                      if (medication.isTablet) ...[
+                        ...List.generate(
+                          medication.dosageAmount.clamp(0, 5),
+                          (_) => const Icon(Icons.medication, color: Colors.blue, size: 24),
+                        ),
+                        if (medication.dosageAmount > 5)
+                          Text(' +${medication.dosageAmount - 5}', style: const TextStyle(color: Colors.blue)),
+                      ] else if (medication.isMl) ...[
+                        Text('${medication.dosageAmount} ml', 
+                          style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18)),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.water_drop, color: Colors.blue, size: 24),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -245,7 +252,7 @@ class MedicationDetailsPage extends ConsumerWidget {
           const SizedBox(height: 16),
           
           _buildDetailRow(context, 'Instructions', medication.instructions ?? 'None'),
-          _buildDetailRow(context, 'Supply', '${medication.currentSupply ?? 0} droplets remaining'),
+          _buildDetailRow(context, 'Duration', medication.isOngoing ? 'Ongoing ♾️' : medication.duration),
           _buildDetailRow(context, 'Critical', medication.isCritical ? 'Yes ⚠️' : 'No'),
         ],
       ),
@@ -329,11 +336,14 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
   final _nameController = TextEditingController();
   final _instructionsController = TextEditingController();
   
-  int _droplets = 1;
+  int _amount = 1;
+  String _unit = 'tablet'; // 'tablet' or 'ml'
   int _frequency = 1;
   TimeOfDay _firstDoseTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isCritical = false;
   bool _isLoading = false;
+  String _durationType = 'ongoing'; // 'ongoing' or 'days'
+  int _durationDays = 7;
 
   @override
   void dispose() {
@@ -375,19 +385,66 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
             ),
             const SizedBox(height: 24),
             
-            // Droplets
-            Text('💧 Droplets per dose', style: Theme.of(context).textTheme.titleMedium),
+            // Dosage unit selection
+            Text('💊 Dosage Type', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.medication, size: 18),
+                        SizedBox(width: 4),
+                        Text('Tablet'),
+                      ],
+                    ),
+                    selected: _unit == 'tablet',
+                    onSelected: (selected) {
+                      if (selected) setState(() {
+                        _unit = 'tablet';
+                        _amount = _amount.clamp(1, 10);
+                      });
+                    },
+                    selectedColor: Colors.blue.shade100,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.water_drop, size: 18),
+                        SizedBox(width: 4),
+                        Text('ml (liquid)'),
+                      ],
+                    ),
+                    selected: _unit == 'ml',
+                    onSelected: (selected) {
+                      if (selected) setState(() => _unit = 'ml');
+                    },
+                    selectedColor: Colors.blue.shade100,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Dosage amount
+            Text('${_unit == 'tablet' ? '💊' : '💧'} Amount per dose', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: Slider(
-                    value: _droplets.toDouble(),
+                    value: _amount.toDouble(),
                     min: 1,
-                    max: 10,
-                    divisions: 9,
-                    label: '$_droplets',
-                    onChanged: (v) => setState(() => _droplets = v.round()),
+                    max: _unit == 'tablet' ? 10 : 50,
+                    divisions: _unit == 'tablet' ? 9 : 49,
+                    label: '$_amount',
+                    onChanged: (v) => setState(() => _amount = v.round()),
                   ),
                 ),
                 Container(
@@ -400,9 +457,13 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('$_droplets', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('$_amount', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 4),
-                      const Icon(Icons.water_drop, color: Colors.blue, size: 20),
+                      Icon(
+                        _unit == 'tablet' ? Icons.medication : Icons.water_drop, 
+                        color: Colors.blue, 
+                        size: 20
+                      ),
                     ],
                   ),
                 ),
@@ -519,6 +580,86 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
               value: _isCritical,
               onChanged: (v) => setState(() => _isCritical = v),
             ),
+            const SizedBox(height: 16),
+            
+            // Duration
+            Text('📆 Duration', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.all_inclusive, size: 18),
+                        SizedBox(width: 4),
+                        Text('Ongoing'),
+                      ],
+                    ),
+                    selected: _durationType == 'ongoing',
+                    onSelected: (selected) {
+                      if (selected) setState(() => _durationType = 'ongoing');
+                    },
+                    selectedColor: Colors.green.shade100,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.calendar_today, size: 18),
+                        SizedBox(width: 4),
+                        Text('Fixed Days'),
+                      ],
+                    ),
+                    selected: _durationType == 'days',
+                    onSelected: (selected) {
+                      if (selected) setState(() => _durationType = 'days');
+                    },
+                    selectedColor: Colors.orange.shade100,
+                  ),
+                ),
+              ],
+            ),
+            if (_durationType == 'days') ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      initialValue: '$_durationDays',
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      onChanged: (v) {
+                        final days = int.tryParse(v);
+                        if (days != null && days > 0) {
+                          setState(() => _durationDays = days);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('days'),
+                  const SizedBox(width: 16),
+                  ...[7, 14, 30].map((days) => Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: ActionChip(
+                      label: Text('${days}d'),
+                      onPressed: () => setState(() => _durationDays = days),
+                      backgroundColor: _durationDays == days ? Colors.orange.shade100 : null,
+                    ),
+                  )),
+                ],
+              ),
+            ],
             const SizedBox(height: 24),
             
             // Save button
@@ -553,17 +694,17 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
         id: const Uuid().v4(),
         userId: widget.userId,
         name: _nameController.text.trim(),
-        dosage: '$_droplets droplet${_droplets > 1 ? 's' : ''}',
-        form: 'drops',
+        dosage: '$_amount ${_unit}${_unit == 'tablet' && _amount > 1 ? 's' : ''}',
+        form: _unit == 'tablet' ? 'tablet' : 'liquid',
         instructions: _instructionsController.text.trim().isNotEmpty 
             ? _instructionsController.text.trim() 
             : null,
         isCritical: _isCritical,
-        currentSupply: 30,
-        lowSupplyThreshold: 7,
         frequency: _frequency,
         firstDoseTime: _firstDoseTimeString,
         scheduleTimes: _scheduleTimes,
+        duration: _durationType == 'ongoing' ? 'ongoing' : '$_durationDays days',
+        durationDays: _durationType == 'days' ? _durationDays : null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

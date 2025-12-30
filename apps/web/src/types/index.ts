@@ -27,13 +27,11 @@ export interface Medication {
   instructions?: string;
   isCritical: boolean;
   isActive: boolean;
-  currentSupply?: number;
-  lowSupplyThreshold?: number;
-  costPerUnit?: number;
-  currency?: string;
   frequency?: number; // times per day (1, 2, 3, 4)
   firstDoseTime?: string; // HH:mm format
   scheduleTimes?: string[]; // calculated times like ["8:00 AM", "8:00 PM"]
+  duration?: string; // "ongoing" or "X days"
+  durationDays?: number; // number of days if not ongoing
   createdAt: string;
   updatedAt: string;
 }

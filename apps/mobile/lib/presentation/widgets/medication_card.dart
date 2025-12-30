@@ -16,9 +16,6 @@ class MedicationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLowSupply = medication.currentSupply != null &&
-        medication.lowSupplyThreshold != null &&
-        medication.currentSupply! <= medication.lowSupplyThreshold!;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -38,7 +35,7 @@ class MedicationCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  // Droplet icon
+                  // Medication icon
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -48,7 +45,7 @@ class MedicationCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      Icons.water_drop,
+                      medication.isTablet ? Icons.medication : Icons.water_drop,
                       color: medication.isCritical ? Colors.red : Colors.blue,
                       size: 28,
                     ),
@@ -74,16 +71,26 @@ class MedicationCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        // Droplets display
+                        // Dosage display
                         Row(
                           children: [
-                            ...List.generate(
-                              medication.dropletCount.clamp(0, 5),
-                              (_) => const Icon(Icons.water_drop, color: Colors.blue, size: 16),
-                            ),
-                            if (medication.dropletCount > 5)
-                              Text(' +${medication.dropletCount - 5}', 
+                            if (medication.isTablet) ...[
+                              ...List.generate(
+                                medication.dosageAmount.clamp(0, 5),
+                                (_) => const Icon(Icons.medication, color: Colors.blue, size: 16),
+                              ),
+                              if (medication.dosageAmount > 5)
+                                Text(' +${medication.dosageAmount - 5}', 
+                                  style: const TextStyle(color: Colors.blue, fontSize: 12)),
+                            ] else if (medication.isMl) ...[
+                              Text('${medication.dosageAmount} ml', 
+                                style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14)),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.water_drop, color: Colors.blue, size: 16),
+                            ] else ...[
+                              Text(medication.dosage, 
                                 style: const TextStyle(color: Colors.blue, fontSize: 12)),
+                            ],
                             const SizedBox(width: 8),
                             Text(
                               '(${medication.dosage})',
@@ -144,43 +151,38 @@ class MedicationCard extends StatelessWidget {
                 ),
               ],
               
-              // Supply indicator
-              if (medication.currentSupply != null) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.water_drop_outlined,
-                      size: 16,
-                      color: isLowSupply ? Colors.orange : theme.colorScheme.onSurfaceVariant,
+              // Duration indicator
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: medication.isOngoing ? Colors.green.shade100 : Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${medication.currentSupply} remaining',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isLowSupply ? Colors.orange : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: isLowSupply ? FontWeight.bold : null,
-                      ),
-                    ),
-                    if (isLowSupply) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          medication.isOngoing ? Icons.all_inclusive : Icons.calendar_today,
+                          size: 14,
+                          color: medication.isOngoing ? Colors.green.shade700 : Colors.orange.shade700,
                         ),
-                        child: Text(
-                          'Low supply',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: Colors.orange.shade800,
+                        const SizedBox(width: 4),
+                        Text(
+                          medication.isOngoing ? 'Ongoing' : medication.duration,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: medication.isOngoing ? Colors.green.shade700 : Colors.orange.shade700,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               
               // Take dose button
               if (onTakeDose != null) ...[

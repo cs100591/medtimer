@@ -4,40 +4,92 @@ import { ReminderCard } from '../components/ReminderCard';
 import { Card, CardContent } from '../components/ui/Card';
 import { setReminders, markTaken, markSkipped, setLoading } from '../store/reminderSlice';
 import type { RootState } from '../store';
-import type { Reminder } from '../types';
+import type { Reminder, Medication } from '../types';
 import api from '../services/api';
 
-// Sample data for demo when API is not available
-const sampleReminders: Reminder[] = [
-  { id: '1', medicationId: 'm1', medicationName: 'Lisinopril', dosage: '10mg tablet', scheduledTime: '8:00 AM', status: 'pending', isCritical: true },
-  { id: '2', medicationId: 'm2', medicationName: 'Metformin', dosage: '500mg tablet', scheduledTime: '12:00 PM', status: 'pending', isCritical: false },
-  { id: '3', medicationId: 'm3', medicationName: 'Aspirin', dosage: '81mg tablet', scheduledTime: '6:00 PM', status: 'pending', isCritical: false },
-];
+// Generate today's reminders from medications
+function generateRemindersFromMedications(medications: Medication[]): Reminder[] {
+  const reminders: Reminder[] = [];
+  
+  medications.forEach(med => {
+    if (!med.isActive) return;
+    
+    const scheduleTimes = med.scheduleTimes || ['8:00 AM'];
+    scheduleTimes.forEach((time, index) => {
+      reminders.push({
+        id: `${med.id}-${index}`,
+        medicationId: med.id,
+        medicationName: med.name,
+        dosage: med.dosage,
+        scheduledTime: time,
+        status: 'pending',
+        isCritical: med.isCritical,
+      });
+    });
+  });
+  
+  // Sort by time
+  return reminders.sort((a, b) => {
+    const timeA = parseTime(a.scheduledTime);
+    const timeB = parseTime(b.scheduledTime);
+    return timeA - timeB;
+  });
+}
+
+// Parse time string to minutes for sorting
+function parseTime(timeStr: string): number {
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+  if (!match) return 0;
+  
+  let hours = parseInt(match[1]);
+  const minutes = parseInt(match[2]);
+  const period = match[3]?.toUpperCase();
+  
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  
+  return hours * 60 + minutes;
+}
 
 export function HomePage() {
   const dispatch = useDispatch();
   const { reminders, loading } = useSelector((state: RootState) => state.reminders);
-  const [localReminders, setLocalReminders] = useState<Reminder[]>(() => {
-    const saved = localStorage.getItem('reminders');
-    return saved ? JSON.parse(saved) : sampleReminders;
-  });
+  const [localReminders, setLocalReminders] = useState<Reminder[]>([]);
   const [snoozeId, setSnoozeId] = useState<string | null>(null);
 
-  // Use local reminders if Redux store is empty
-  const displayReminders = reminders.length > 0 ? reminders : localReminders;
-
+  // Load medications and generate reminders
   useEffect(() => {
-    // Try to load from API, fall back to local storage
-    loadReminders();
+    loadRemindersFromMedications();
   }, []);
 
-  // Save to localStorage whenever localReminders change
-  useEffect(() => {
-    localStorage.setItem('reminders', JSON.stringify(localReminders));
-  }, [localReminders]);
-
-  const loadReminders = async () => {
+  const loadRemindersFromMedications = async () => {
     dispatch(setLoading(true));
+    
+    // First try to load from localStorage medications
+    const savedMeds = localStorage.getItem('medications');
+    if (savedMeds) {
+      try {
+        const medications: Medication[] = JSON.parse(savedMeds);
+        const generatedReminders = generateRemindersFromMedications(medications);
+        
+        // Load saved reminder statuses
+        const savedStatuses = localStorage.getItem('reminderStatuses');
+        const statuses: Record<string, 'pending' | 'completed' | 'missed'> = savedStatuses ? JSON.parse(savedStatuses) : {};
+        
+        // Apply saved statuses
+        const remindersWithStatus = generatedReminders.map(r => ({
+          ...r,
+          status: statuses[r.id] || 'pending'
+        }));
+        
+        setLocalReminders(remindersWithStatus);
+        dispatch(setReminders(remindersWithStatus));
+      } catch (e) {
+        console.log('Error parsing medications');
+      }
+    }
+    
+    // Try API call
     try {
       const response = await api.getPendingReminders();
       if (response.data && Array.isArray(response.data) && response.data.length > 0) {
@@ -50,14 +102,26 @@ export function HomePage() {
     }
   };
 
-  const handleTake = async (id: string) => {
-    // Update local state immediately for responsiveness
-    setLocalReminders(prev => 
-      prev.map(r => r.id === id ? { ...r, status: 'completed' as const } : r)
-    );
-    dispatch(markTaken(id));
+  // Use local reminders if Redux store is empty
+  const displayReminders = reminders.length > 0 ? reminders : localReminders;
 
-    // Try API call
+  // Save reminder statuses to localStorage
+  const saveReminderStatuses = (updatedReminders: Reminder[]) => {
+    const statuses: Record<string, string> = {};
+    updatedReminders.forEach(r => {
+      statuses[r.id] = r.status;
+    });
+    localStorage.setItem('reminderStatuses', JSON.stringify(statuses));
+  };
+
+  const handleTake = async (id: string) => {
+    const updatedReminders = localReminders.map(r => 
+      r.id === id ? { ...r, status: 'completed' as const } : r
+    );
+    setLocalReminders(updatedReminders);
+    dispatch(markTaken(id));
+    saveReminderStatuses(updatedReminders);
+
     const reminder = displayReminders.find(r => r.id === id);
     if (reminder) {
       try {
@@ -69,13 +133,13 @@ export function HomePage() {
   };
 
   const handleSkip = async (id: string) => {
-    // Update local state immediately
-    setLocalReminders(prev => 
-      prev.map(r => r.id === id ? { ...r, status: 'missed' as const } : r)
+    const updatedReminders = localReminders.map(r => 
+      r.id === id ? { ...r, status: 'missed' as const } : r
     );
+    setLocalReminders(updatedReminders);
     dispatch(markSkipped(id));
+    saveReminderStatuses(updatedReminders);
 
-    // Try API call
     const reminder = displayReminders.find(r => r.id === id);
     if (reminder) {
       try {
@@ -89,26 +153,36 @@ export function HomePage() {
   const handleSnooze = async (id: string) => {
     setSnoozeId(id);
     
-    // Snooze for 15 minutes - update the scheduled time
-    setLocalReminders(prev => 
-      prev.map(r => {
-        if (r.id === id) {
-          const [time, period] = r.scheduledTime.split(' ');
-          const [hours, minutes] = time.split(':').map(Number);
-          let newMinutes = minutes + 15;
-          let newHours = hours;
-          if (newMinutes >= 60) {
-            newMinutes -= 60;
-            newHours += 1;
+    const updatedReminders = localReminders.map(r => {
+      if (r.id === id) {
+        const match = r.scheduledTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+        if (match) {
+          let hours = parseInt(match[1]);
+          let minutes = parseInt(match[2]);
+          const period = match[3] || '';
+          
+          minutes += 15;
+          if (minutes >= 60) {
+            minutes -= 60;
+            hours += 1;
           }
-          const newTime = `${newHours}:${newMinutes.toString().padStart(2, '0')} ${period}`;
+          
+          let newPeriod = period;
+          if (hours === 12 && period === 'AM') newPeriod = 'PM';
+          if (hours > 12) {
+            hours -= 12;
+            if (period === 'AM') newPeriod = 'PM';
+          }
+          
+          const newTime = `${hours}:${minutes.toString().padStart(2, '0')} ${newPeriod}`;
           return { ...r, scheduledTime: newTime };
         }
-        return r;
-      })
-    );
+      }
+      return r;
+    });
+    
+    setLocalReminders(updatedReminders);
 
-    // Try API call
     const reminder = displayReminders.find(r => r.id === id);
     if (reminder) {
       try {
@@ -122,9 +196,8 @@ export function HomePage() {
   };
 
   const handleReset = () => {
-    const resetReminders = sampleReminders.map(r => ({ ...r, status: 'pending' as const }));
-    setLocalReminders(resetReminders);
-    dispatch(setReminders(resetReminders));
+    localStorage.removeItem('reminderStatuses');
+    loadRemindersFromMedications();
   };
 
   const today = new Date();
@@ -177,6 +250,17 @@ export function HomePage() {
 
       {loading && <p className="text-gray-500 mb-4">Loading...</p>}
 
+      {/* No medications message */}
+      {total === 0 && !loading && (
+        <Card className="mb-6">
+          <CardContent className="text-center py-8">
+            <span className="text-4xl mb-4 block">💊</span>
+            <p className="text-gray-600 mb-2">No medications scheduled for today</p>
+            <p className="text-sm text-gray-500">Add medications in the Medications tab to see reminders here</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pending Reminders */}
       {pendingReminders.length > 0 && (
         <>
@@ -218,7 +302,7 @@ export function HomePage() {
               onClick={handleReset}
               className="text-blue-600 hover:text-blue-800 text-sm underline"
             >
-              Reset demo reminders
+              Reset today's reminders
             </button>
           </CardContent>
         </Card>

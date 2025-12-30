@@ -9,13 +9,11 @@ class MedicationModel {
   final String? instructions;
   final bool isCritical;
   final bool isActive;
-  final int? currentSupply;
-  final int? lowSupplyThreshold;
-  final double? costPerUnit;
-  final String? currency;
   final int frequency; // times per day (1, 2, 3, 4)
   final String firstDoseTime; // HH:mm format
   final List<String> scheduleTimes; // calculated times
+  final String duration; // "ongoing" or "X days"
+  final int? durationDays; // number of days if not ongoing
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -29,13 +27,11 @@ class MedicationModel {
     this.instructions,
     this.isCritical = false,
     this.isActive = true,
-    this.currentSupply,
-    this.lowSupplyThreshold,
-    this.costPerUnit,
-    this.currency,
     this.frequency = 1,
     this.firstDoseTime = '08:00',
     this.scheduleTimes = const ['8:00 AM'],
+    this.duration = 'ongoing',
+    this.durationDays,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -68,11 +64,23 @@ class MedicationModel {
     return '$displayHours:${minutes.toString().padLeft(2, '0')} $period';
   }
 
-  // Get droplet count from dosage
-  int get dropletCount {
-    final match = RegExp(r'(\d+)\s*droplet', caseSensitive: false).firstMatch(dosage);
-    return match != null ? int.parse(match.group(1)!) : 1;
+  // Get dosage amount from dosage string
+  int get dosageAmount {
+    final tabletMatch = RegExp(r'(\d+)\s*tablet', caseSensitive: false).firstMatch(dosage);
+    final mlMatch = RegExp(r'(\d+)\s*ml', caseSensitive: false).firstMatch(dosage);
+    if (tabletMatch != null) return int.parse(tabletMatch.group(1)!);
+    if (mlMatch != null) return int.parse(mlMatch.group(1)!);
+    return 1;
   }
+
+  // Check if dosage is tablet type
+  bool get isTablet => dosage.toLowerCase().contains('tablet');
+  
+  // Check if dosage is ml type
+  bool get isMl => dosage.toLowerCase().contains('ml');
+
+  // Check if ongoing
+  bool get isOngoing => duration == 'ongoing';
 
   factory MedicationModel.fromJson(Map<String, dynamic> json) {
     final frequency = json['frequency'] as int? ?? 1;
@@ -87,17 +95,15 @@ class MedicationModel {
       name: json['name'] as String,
       genericName: json['genericName'] as String?,
       dosage: json['dosage'] as String,
-      form: json['form'] as String? ?? 'drops',
+      form: json['form'] as String? ?? 'tablet',
       instructions: json['instructions'] as String?,
       isCritical: json['isCritical'] as bool? ?? false,
       isActive: json['isActive'] as bool? ?? true,
-      currentSupply: json['currentSupply'] as int?,
-      lowSupplyThreshold: json['lowSupplyThreshold'] as int?,
-      costPerUnit: (json['costPerUnit'] as num?)?.toDouble(),
-      currency: json['currency'] as String?,
       frequency: frequency,
       firstDoseTime: firstDoseTime,
       scheduleTimes: scheduleTimes,
+      duration: json['duration'] as String? ?? 'ongoing',
+      durationDays: json['durationDays'] as int?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -114,13 +120,11 @@ class MedicationModel {
       'instructions': instructions,
       'isCritical': isCritical,
       'isActive': isActive,
-      'currentSupply': currentSupply,
-      'lowSupplyThreshold': lowSupplyThreshold,
-      'costPerUnit': costPerUnit,
-      'currency': currency,
       'frequency': frequency,
       'firstDoseTime': firstDoseTime,
       'scheduleTimes': scheduleTimes,
+      'duration': duration,
+      'durationDays': durationDays,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -136,13 +140,11 @@ class MedicationModel {
     String? instructions,
     bool? isCritical,
     bool? isActive,
-    int? currentSupply,
-    int? lowSupplyThreshold,
-    double? costPerUnit,
-    String? currency,
     int? frequency,
     String? firstDoseTime,
     List<String>? scheduleTimes,
+    String? duration,
+    int? durationDays,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -156,13 +158,11 @@ class MedicationModel {
       instructions: instructions ?? this.instructions,
       isCritical: isCritical ?? this.isCritical,
       isActive: isActive ?? this.isActive,
-      currentSupply: currentSupply ?? this.currentSupply,
-      lowSupplyThreshold: lowSupplyThreshold ?? this.lowSupplyThreshold,
-      costPerUnit: costPerUnit ?? this.costPerUnit,
-      currency: currency ?? this.currency,
       frequency: frequency ?? this.frequency,
       firstDoseTime: firstDoseTime ?? this.firstDoseTime,
       scheduleTimes: scheduleTimes ?? this.scheduleTimes,
+      duration: duration ?? this.duration,
+      durationDays: durationDays ?? this.durationDays,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

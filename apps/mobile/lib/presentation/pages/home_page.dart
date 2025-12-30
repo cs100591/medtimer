@@ -137,54 +137,93 @@ class _TodayTab extends ConsumerWidget {
             ],
           ),
         ),
-        data: (medications) => ListView(
-          children: [
-            _buildAdherenceSummary(context, medications.length),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Your Medications',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+        data: (medications) {
+          // Generate today's reminders from medications
+          final reminders = <Map<String, dynamic>>[];
+          for (final med in medications) {
+            for (final time in med.scheduleTimes) {
+              reminders.add({
+                'medication': med,
+                'time': time,
+                'id': '${med.id}-${med.scheduleTimes.indexOf(time)}',
+              });
+            }
+          }
+          
+          // Sort by time
+          reminders.sort((a, b) {
+            final timeA = _parseTime(a['time'] as String);
+            final timeB = _parseTime(b['time'] as String);
+            return timeA.compareTo(timeB);
+          });
+          
+          return ListView(
+            children: [
+              _buildAdherenceSummary(context, reminders.length),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  "Today's Reminders",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
-            if (medications.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    Icon(Icons.medication_outlined, size: 64, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text(
-                      'No medications yet',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Add your first medication to get started',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              )
-            else
-              ...medications.map((med) => ReminderCard(
-                medicationName: med.name,
-                dosage: '${med.dosage} ${med.form}',
-                time: 'As scheduled',
-                isPending: true,
-                isCritical: med.isCritical,
-                onTake: () => _handleTake(context, med.name),
-                onSkip: () => _handleSkip(context, med.name),
-                onSnooze: () => _handleSnooze(context, med.name),
-              )),
-            const SizedBox(height: 80),
-          ],
-        ),
+              if (reminders.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      Icon(Icons.medication_outlined, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'No medications scheduled',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Add medications to see reminders here',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...reminders.map((reminder) {
+                  final med = reminder['medication'] as MedicationModel;
+                  final time = reminder['time'] as String;
+                  return ReminderCard(
+                    medicationName: med.name,
+                    dosage: med.dosage,
+                    time: time,
+                    isPending: true,
+                    isCritical: med.isCritical,
+                    onTake: () => _handleTake(context, med.name),
+                    onSkip: () => _handleSkip(context, med.name),
+                    onSnooze: () => _handleSnooze(context, med.name),
+                  );
+                }),
+              const SizedBox(height: 80),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  int _parseTime(String timeStr) {
+    final match = RegExp(r'(\d+):(\d+)\s*(AM|PM)?', caseSensitive: false).firstMatch(timeStr);
+    if (match == null) return 0;
+    
+    var hours = int.parse(match.group(1)!);
+    final minutes = int.parse(match.group(2)!);
+    final period = match.group(3)?.toUpperCase();
+    
+    if (period == 'PM' && hours != 12) hours += 12;
+    if (period == 'AM' && hours == 12) hours = 0;
+    
+    return hours * 60 + minutes;
   }
 
   Widget _buildAdherenceSummary(BuildContext context, int totalMeds) {
