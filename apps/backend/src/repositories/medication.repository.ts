@@ -2,7 +2,7 @@ import { Repository, ILike } from 'typeorm';
 import { AppDataSource } from '../database/data-source';
 import { MedicationEntity } from '../models/entities/Medication.entity';
 import { NotFoundError } from '../middleware/error.middleware';
-import { DosageUnit, MedicationForm } from '@medication-reminder/shared-types';
+import { DosageUnit, MedicationForm } from '../types/shared-types';
 
 export interface CreateMedicationData {
   userId: string;

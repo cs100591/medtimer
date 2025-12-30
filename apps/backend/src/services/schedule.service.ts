@@ -4,7 +4,7 @@ import {
   UpdateScheduleData 
 } from '../repositories/schedule.repository';
 import { ScheduleEntity } from '../models/entities/Schedule.entity';
-import { FrequencyType, DurationType, DayOfWeek } from '@medication-reminder/shared-types';
+import { FrequencyType, DurationType, DayOfWeek } from '../types/shared-types';
 
 export interface CreateScheduleInput {
   medicationId: string;

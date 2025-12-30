@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { CaregiverPermission, CaregiverStatus } from '@medication-reminder/shared-types';
+import { CaregiverPermission, CaregiverStatus } from '../../types/shared-types';
 
 /**
  * Property 12: Permission-Based Caregiver Access

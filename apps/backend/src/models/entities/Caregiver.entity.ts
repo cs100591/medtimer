@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { CaregiverPermission, CaregiverStatus } from '@medication-reminder/shared-types';
+import { CaregiverPermission, CaregiverStatus } from '../../types/shared-types';
 import { UserEntity } from './User.entity';
 
 @Entity('caregiver_access')

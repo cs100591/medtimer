@@ -1,4 +1,4 @@
-import { AdherenceStatus } from '@medication-reminder/shared-types';
+import { AdherenceStatus } from '../types/shared-types';
 import { AdherenceEntity } from '../models/entities/Adherence.entity';
 import { AdherenceRepository, AdherenceStats, AdherenceFilters } from '../repositories/adherence.repository';
 import { MedicationRepository } from '../repositories/medication.repository';

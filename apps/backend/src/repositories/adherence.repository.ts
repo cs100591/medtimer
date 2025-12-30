@@ -1,7 +1,7 @@
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { AppDataSource } from '../database/data-source';
 import { AdherenceEntity } from '../models/entities/Adherence.entity';
-import { AdherenceStatus } from '@medication-reminder/shared-types';
+import { AdherenceStatus } from '../types/shared-types';
 
 export interface AdherenceFilters {
   userId: string;

@@ -13,7 +13,7 @@ import {
   MedicationForm, 
   FrequencyType, 
   DurationType 
-} from '@medication-reminder/shared-types';
+} from '../../types/shared-types';
 
 // Arbitraries for medication data
 const dosageUnitArb = fc.constantFrom(

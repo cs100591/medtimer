@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AdherenceStatus } from '@medication-reminder/shared-types';
+import { AdherenceStatus } from '../types/shared-types';
 import { adherenceService } from '../services/adherence.service';
 import { logger } from '../utils/logger';
 

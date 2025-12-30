@@ -2,7 +2,7 @@ import Bull from 'bull';
 import { config } from '../config';
 import { scheduleService } from './schedule.service';
 import { ScheduleEntity } from '../models/entities/Schedule.entity';
-import { EscalationLevel } from '@medication-reminder/shared-types';
+import { EscalationLevel } from '../types/shared-types';
 import { logger } from '../utils/logger';
 
 export interface ReminderJob {

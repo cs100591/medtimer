@@ -5,7 +5,7 @@ import {
   MedicationSearchOptions,
 } from '../repositories/medication.repository';
 import { MedicationEntity } from '../models/entities/Medication.entity';
-import { DosageUnit, MedicationForm } from '@medication-reminder/shared-types';
+import { DosageUnit, MedicationForm } from '../types/shared-types';
 
 export interface CreateMedicationInput {
   name: string;

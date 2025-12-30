@@ -7,7 +7,7 @@
  */
 
 import * as fc from 'fast-check';
-import { EscalationLevel } from '@medication-reminder/shared-types';
+import { EscalationLevel } from '../../types/shared-types';
 import { escalationService, EscalationState } from '../services/escalation.service';
 
 // Arbitraries

@@ -11,7 +11,7 @@ import {
   FrequencyType, 
   DurationType,
   EscalationLevel,
-} from '@medication-reminder/shared-types';
+} from '../../types/shared-types';
 import { UserEntity } from './User.entity';
 import { MedicationEntity } from './Medication.entity';
 

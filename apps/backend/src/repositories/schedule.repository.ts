@@ -2,7 +2,7 @@ import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull, Not } from 'typeo
 import { AppDataSource } from '../database/data-source';
 import { ScheduleEntity } from '../models/entities/Schedule.entity';
 import { NotFoundError } from '../middleware/error.middleware';
-import { FrequencyType, DurationType, EscalationLevel } from '@medication-reminder/shared-types';
+import { FrequencyType, DurationType, EscalationLevel } from '../types/shared-types';
 
 export interface CreateScheduleData {
   medicationId: string;

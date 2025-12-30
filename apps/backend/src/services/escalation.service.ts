@@ -1,4 +1,4 @@
-import { EscalationLevel } from '@medication-reminder/shared-types';
+import { EscalationLevel } from '../types/shared-types';
 import { ScheduleEntity } from '../models/entities/Schedule.entity';
 import { logger } from '../utils/logger';
 

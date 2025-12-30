@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import { randomBytes } from 'crypto';
-import { CaregiverPermission, CaregiverStatus } from '@medication-reminder/shared-types';
+import { CaregiverPermission, CaregiverStatus } from '../types/shared-types';
 import { AppDataSource } from '../database/data-source';
 import { CaregiverAccessEntity } from '../models/entities/Caregiver.entity';
 import { UserEntity } from '../models/entities/User.entity';

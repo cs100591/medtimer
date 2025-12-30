@@ -1,4 +1,4 @@
-import { SupportedLanguage } from '@medication-reminder/shared-types';
+import { SupportedLanguage } from '../types/shared-types';
 import { logger } from '../utils/logger';
 
 export interface LocaleConfig {

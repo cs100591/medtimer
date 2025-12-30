@@ -13,7 +13,7 @@ import {
   MeasurementUnit, 
   TimeFormat, 
   DateFormat 
-} from '@medication-reminder/shared-types';
+} from '../../types/shared-types';
 import { encryptField, decryptField } from '../../utils/encryption';
 
 @Entity('users')

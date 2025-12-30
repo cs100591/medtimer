@@ -1,4 +1,4 @@
-import { AdherenceStatus } from '@medication-reminder/shared-types';
+import { AdherenceStatus } from '../types/shared-types';
 import { AdherenceRepository } from '../repositories/adherence.repository';
 import { ScheduleRepository } from '../repositories/schedule.repository';
 import { logger } from '../utils/logger';

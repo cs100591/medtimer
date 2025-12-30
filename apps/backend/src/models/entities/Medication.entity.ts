@@ -11,7 +11,7 @@ import {
 import { 
   DosageUnit, 
   MedicationForm,
-} from '@medication-reminder/shared-types';
+} from '../../types/shared-types';
 import { UserEntity } from './User.entity';
 
 @Entity('medications')

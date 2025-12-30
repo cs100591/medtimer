@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { AdherenceStatus } from '@medication-reminder/shared-types';
+import { AdherenceStatus } from '../../types/shared-types';
 import { UserEntity } from './User.entity';
 import { MedicationEntity } from './Medication.entity';
 import { ScheduleEntity } from './Schedule.entity';

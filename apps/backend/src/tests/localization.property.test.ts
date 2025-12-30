@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { SupportedLanguage } from '@medication-reminder/shared-types';
+import { SupportedLanguage } from '../../types/shared-types';
 
 /**
  * Property 3: Comprehensive Multilingual Support

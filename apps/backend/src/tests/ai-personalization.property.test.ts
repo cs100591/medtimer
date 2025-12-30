@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { AdherenceStatus } from '@medication-reminder/shared-types';
+import { AdherenceStatus } from '../../types/shared-types';
 
 /**
  * Property 15: AI Personalization and Learning
