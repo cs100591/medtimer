@@ -96,6 +96,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
     } catch (e) {
       debugPrint('AuthNotifier: Registration error: $e');
+      // Check if offline mode was enabled (user was created locally)
+      if (_repository.isAuthenticated) {
+        debugPrint('AuthNotifier: Offline mode enabled, user authenticated locally');
+        try {
+          final user = await _repository.getProfile();
+          state = AuthState(status: AuthStatus.authenticated, user: user);
+          return;
+        } catch (_) {}
+      }
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: 'Connection failed. Please check your internet connection.',
@@ -124,6 +133,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
     } catch (e) {
       debugPrint('AuthNotifier: Login error: $e');
+      // Check if offline mode was enabled (user was logged in locally)
+      if (_repository.isAuthenticated) {
+        debugPrint('AuthNotifier: Offline mode enabled, user authenticated locally');
+        try {
+          final user = await _repository.getProfile();
+          state = AuthState(status: AuthStatus.authenticated, user: user);
+          return;
+        } catch (_) {}
+      }
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: 'Connection failed. Please check your internet connection.',

@@ -252,6 +252,7 @@ class MedicationDetailsPage extends ConsumerWidget {
           const SizedBox(height: 16),
           
           _buildDetailRow(context, 'Instructions', medication.instructions ?? 'None'),
+          _buildDetailRow(context, 'Duration', medication.durationDisplay),
           _buildDetailRow(context, 'Critical', medication.isCritical ? 'Yes ⚠️' : 'No'),
         ],
       ),
@@ -341,6 +342,7 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
   TimeOfDay _firstDoseTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isCritical = false;
   bool _isLoading = false;
+  int _durationDays = 0; // 0 = ongoing, 1-99 = fixed days
 
   @override
   void dispose() {
@@ -577,6 +579,72 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
               value: _isCritical,
               onChanged: (v) => setState(() => _isCritical = v),
             ),
+            const SizedBox(height: 16),
+            
+            // Duration with up/down buttons
+            Text('📆 Duration', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _durationDays == 0 ? 'Ongoing' : '$_durationDays days',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          _durationDays == 0 ? 'No end date' : 'Fixed duration',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      // Down button
+                      IconButton(
+                        onPressed: _durationDays > 0 
+                            ? () => setState(() => _durationDays--) 
+                            : null,
+                        icon: const Icon(Icons.remove_circle_outline),
+                        iconSize: 32,
+                        color: Colors.blue,
+                      ),
+                      Container(
+                        width: 50,
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$_durationDays',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      // Up button
+                      IconButton(
+                        onPressed: _durationDays < 99 
+                            ? () => setState(() => _durationDays++) 
+                            : null,
+                        icon: const Icon(Icons.add_circle_outline),
+                        iconSize: 32,
+                        color: Colors.blue,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '0 = Ongoing (no end date), 1-99 = Fixed number of days',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
             const SizedBox(height: 24),
             
             // Save button
@@ -620,6 +688,7 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
         frequency: _frequency,
         firstDoseTime: _firstDoseTimeString,
         scheduleTimes: _scheduleTimes,
+        durationDays: _durationDays,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

@@ -4,12 +4,11 @@ import { Button } from './ui/Button';
 
 interface MedicationCardProps {
   medication: Medication;
-  onTakeDose?: () => void;
   onClick?: () => void;
   onDelete?: () => void;
 }
 
-export function MedicationCard({ medication, onTakeDose, onClick, onDelete }: MedicationCardProps) {
+export function MedicationCard({ medication, onClick, onDelete }: MedicationCardProps) {
   // Extract dosage amount and unit from dosage string
   const tabletMatch = medication.dosage.match(/(\d+)\s*tablet/i);
   const mlMatch = medication.dosage.match(/(\d+)\s*ml/i);
@@ -18,7 +17,8 @@ export function MedicationCard({ medication, onTakeDose, onClick, onDelete }: Me
   const isMl = mlMatch !== null;
   
   // Check if ongoing or fixed duration
-  const isOngoing = medication.duration === 'ongoing';
+  const isOngoing = medication.durationDays === 0 || medication.durationDays === undefined;
+  const durationDisplay = isOngoing ? 'Ongoing' : `${medication.durationDays} days`;
 
   return (
     <Card className={medication.isCritical ? 'border-l-4 border-red-500' : ''} onClick={onClick}>
@@ -80,24 +80,17 @@ export function MedicationCard({ medication, onTakeDose, onClick, onDelete }: Me
               </span>
             ) : (
               <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                📅 {medication.duration}
+                📅 {durationDisplay}
               </span>
             )}
           </div>
         </div>
       </div>
-      {(onTakeDose || onDelete) && (
+      {onDelete && (
         <div className="mt-4 pt-4 border-t flex gap-2">
-          {onTakeDose && (
-            <Button onClick={(e) => { e.stopPropagation(); onTakeDose(); }} className="flex-1">
-              ✓ Take Dose
-            </Button>
-          )}
-          {onDelete && (
-            <Button variant="danger" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
-              🗑️ Delete
-            </Button>
-          )}
+          <Button variant="danger" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+            🗑️ Delete
+          </Button>
         </div>
       )}
     </Card>

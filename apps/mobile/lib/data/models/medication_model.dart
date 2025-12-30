@@ -16,6 +16,7 @@ class MedicationModel {
   final int frequency; // times per day (1, 2, 3, 4)
   final String firstDoseTime; // HH:mm format
   final List<String> scheduleTimes; // calculated times
+  final int durationDays; // 0 = ongoing, 1-99 = fixed days
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -36,9 +37,16 @@ class MedicationModel {
     this.frequency = 1,
     this.firstDoseTime = '08:00',
     this.scheduleTimes = const ['8:00 AM'],
+    this.durationDays = 0, // 0 = ongoing
     required this.createdAt,
     required this.updatedAt,
   });
+
+  // Check if medication is ongoing (no end date)
+  bool get isOngoing => durationDays == 0;
+  
+  // Get duration display string
+  String get durationDisplay => durationDays == 0 ? 'Ongoing' : '$durationDays days';
 
   // Calculate schedule times based on frequency and first dose
   static List<String> calculateScheduleTimes(String firstTime, int frequency) {
@@ -107,6 +115,7 @@ class MedicationModel {
       frequency: frequency,
       firstDoseTime: firstDoseTime,
       scheduleTimes: scheduleTimes,
+      durationDays: json['durationDays'] as int? ?? 0,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -130,6 +139,7 @@ class MedicationModel {
       'frequency': frequency,
       'firstDoseTime': firstDoseTime,
       'scheduleTimes': scheduleTimes,
+      'durationDays': durationDays,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -152,6 +162,7 @@ class MedicationModel {
     int? frequency,
     String? firstDoseTime,
     List<String>? scheduleTimes,
+    int? durationDays,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -172,6 +183,7 @@ class MedicationModel {
       frequency: frequency ?? this.frequency,
       firstDoseTime: firstDoseTime ?? this.firstDoseTime,
       scheduleTimes: scheduleTimes ?? this.scheduleTimes,
+      durationDays: durationDays ?? this.durationDays,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

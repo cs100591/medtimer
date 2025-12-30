@@ -24,13 +24,12 @@ function calculateScheduleTimes(firstTime: string, frequency: number): string[] 
 
 // Dosage unit types
 type DosageUnit = 'tablet' | 'ml';
-type DurationType = 'ongoing' | 'days';
 
 // Sample data for demo
 const sampleMedications: Medication[] = [
-  { id: 'm1', userId: 'demo', name: 'Lisinopril', dosage: '2 tablets', form: 'tablet', instructions: 'Take once daily in the morning', isCritical: true, isActive: true, frequency: 1, firstDoseTime: '08:00', scheduleTimes: ['8:00 AM'], duration: 'ongoing', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'm2', userId: 'demo', name: 'Metformin', dosage: '5 ml', form: 'liquid', instructions: 'Take with meals', isCritical: false, isActive: true, frequency: 2, firstDoseTime: '08:00', scheduleTimes: ['8:00 AM', '8:00 PM'], duration: 'ongoing', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'm3', userId: 'demo', name: 'Antibiotics', dosage: '1 tablet', form: 'tablet', instructions: 'Take daily for infection', isCritical: false, isActive: true, frequency: 1, firstDoseTime: '09:00', scheduleTimes: ['9:00 AM'], duration: '7 days', durationDays: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'm1', userId: 'demo', name: 'Lisinopril', dosage: '2 tablets', form: 'tablet', instructions: 'Take once daily in the morning', isCritical: true, isActive: true, frequency: 1, firstDoseTime: '08:00', scheduleTimes: ['8:00 AM'], durationDays: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'm2', userId: 'demo', name: 'Metformin', dosage: '5 ml', form: 'liquid', instructions: 'Take with meals', isCritical: false, isActive: true, frequency: 2, firstDoseTime: '08:00', scheduleTimes: ['8:00 AM', '8:00 PM'], durationDays: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'm3', userId: 'demo', name: 'Antibiotics', dosage: '1 tablet', form: 'tablet', instructions: 'Take daily for infection', isCritical: false, isActive: true, frequency: 1, firstDoseTime: '09:00', scheduleTimes: ['9:00 AM'], durationDays: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
 
 export function MedicationsPage() {
@@ -56,8 +55,7 @@ export function MedicationsPage() {
     isCritical: false,
     frequency: 1,
     firstDoseTime: '08:00',
-    durationType: 'ongoing' as DurationType,
-    durationDays: 7,
+    durationDays: 0, // 0 = ongoing, 1-99 = fixed days
   });
 
   // Save to localStorage whenever medications change
@@ -103,8 +101,7 @@ export function MedicationsPage() {
       frequency: newMed.frequency,
       firstDoseTime: newMed.firstDoseTime,
       scheduleTimes: scheduleTimes,
-      duration: newMed.durationType === 'ongoing' ? 'ongoing' : `${newMed.durationDays} days`,
-      durationDays: newMed.durationType === 'days' ? newMed.durationDays : undefined,
+      durationDays: newMed.durationDays,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -112,7 +109,7 @@ export function MedicationsPage() {
     // Add locally first
     setMedications(prev => [...prev, newMedication]);
     setShowAddForm(false);
-    setNewMed({ name: '', amount: 1, unit: 'tablet', instructions: '', isCritical: false, frequency: 1, firstDoseTime: '08:00', durationType: 'ongoing', durationDays: 7 });
+    setNewMed({ name: '', amount: 1, unit: 'tablet', instructions: '', isCritical: false, frequency: 1, firstDoseTime: '08:00', durationDays: 0 });
 
     // Try API call
     try {
@@ -133,14 +130,9 @@ export function MedicationsPage() {
     }
   };
 
-  const handleTakeDose = (id: string) => {
-    // Just mark as taken for today (no inventory tracking)
-    console.log('Dose taken for medication:', id);
-  };
-
   const filteredMeds = medications.filter(m => {
     if (filter === 'critical') return m.isCritical;
-    if (filter === 'ongoing') return m.duration === 'ongoing';
+    if (filter === 'ongoing') return m.durationDays === 0 || m.durationDays === undefined;
     return true;
   });
 
@@ -252,60 +244,37 @@ export function MedicationsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">📆 Duration</label>
-              <div className="flex gap-2 mb-2">
-                <button
-                  type="button"
-                  onClick={() => setNewMed({ ...newMed, durationType: 'ongoing' })}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    newMed.durationType === 'ongoing' 
-                      ? 'bg-green-100 border-green-500 text-green-700' 
-                      : 'bg-white border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  ♾️ Ongoing
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewMed({ ...newMed, durationType: 'days' })}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    newMed.durationType === 'days' 
-                      ? 'bg-orange-100 border-orange-500 text-orange-700' 
-                      : 'bg-white border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  📅 Fixed Days
-                </button>
-              </div>
-              {newMed.durationType === 'days' && (
-                <div className="flex items-center gap-3 mt-2">
-                  <input
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={newMed.durationDays}
-                    onChange={(e) => setNewMed({ ...newMed, durationDays: parseInt(e.target.value) || 1 })}
-                    className="w-24 border rounded-lg px-3 py-2 text-center"
-                  />
-                  <span className="text-sm text-gray-600">days</span>
-                  <div className="flex gap-1">
-                    {[7, 14, 30].map((days) => (
-                      <button
-                        key={days}
-                        type="button"
-                        onClick={() => setNewMed({ ...newMed, durationDays: days })}
-                        className={`px-3 py-1 rounded text-xs font-medium ${
-                          newMed.durationDays === days 
-                            ? 'bg-orange-100 text-orange-700' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {days}d
-                      </button>
-                    ))}
-                  </div>
+              <label className="block text-sm font-medium mb-1">📆 Duration (days)</label>
+              <div className="flex items-center gap-4 p-4 border rounded-lg">
+                <div className="flex-1">
+                  <p className="text-lg font-bold">
+                    {newMed.durationDays === 0 ? 'Ongoing' : `${newMed.durationDays} days`}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {newMed.durationDays === 0 ? 'No end date' : 'Fixed duration'}
+                  </p>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewMed({ ...newMed, durationDays: Math.max(0, newMed.durationDays - 1) })}
+                    disabled={newMed.durationDays === 0}
+                    className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 text-xl font-bold hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    −
+                  </button>
+                  <span className="w-12 text-center text-xl font-bold">{newMed.durationDays}</span>
+                  <button
+                    type="button"
+                    onClick={() => setNewMed({ ...newMed, durationDays: Math.min(99, newMed.durationDays + 1) })}
+                    disabled={newMed.durationDays === 99}
+                    className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 text-xl font-bold hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">0 = Ongoing (no end date), 1-99 = Fixed number of days</p>
             </div>
 
             <div>
@@ -367,7 +336,6 @@ export function MedicationsPage() {
             <MedicationCard 
               key={med.id} 
               medication={med} 
-              onTakeDose={() => handleTakeDose(med.id)}
               onDelete={() => handleDelete(med.id)}
             />
           ))

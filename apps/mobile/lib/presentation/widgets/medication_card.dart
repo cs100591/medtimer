@@ -4,13 +4,11 @@ import '../../data/models/medication_model.dart';
 class MedicationCard extends StatelessWidget {
   final MedicationModel medication;
   final VoidCallback? onTap;
-  final VoidCallback? onTakeDose;
 
   const MedicationCard({
     super.key,
     required this.medication,
     this.onTap,
-    this.onTakeDose,
   });
 
   @override
@@ -151,22 +149,34 @@ class MedicationCard extends StatelessWidget {
                 ),
               ],
               
-              // Take dose button
-              if (onTakeDose != null) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onTakeDose,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Take Dose'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
+              // Duration indicator
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: medication.isOngoing ? Colors.green.shade100 : Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      medication.isOngoing ? Icons.all_inclusive : Icons.calendar_today,
+                      size: 14,
+                      color: medication.isOngoing ? Colors.green.shade700 : Colors.orange.shade700,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      medication.durationDisplay,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: medication.isOngoing ? Colors.green.shade700 : Colors.orange.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
