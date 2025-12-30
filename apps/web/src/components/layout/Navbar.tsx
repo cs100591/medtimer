@@ -1,21 +1,43 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { useState, useEffect } from 'react';
 import { logout } from '../../store/authSlice';
 import type { RootState } from '../../store';
-
-const navItems = [
-  { path: '/', label: 'Today', icon: '📅' },
-  { path: '/medications', label: 'Medications', icon: '💊' },
-  { path: '/adherence', label: 'Adherence', icon: '📊' },
-  { path: '/caregiver', label: 'Caregiver', icon: '👥' },
-  { path: '/settings', label: 'Settings', icon: '⚙️' },
-];
+import { getTranslation } from '../../i18n/translations';
 
 export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
+  const [lang, setLang] = useState(localStorage.getItem('app_language') || 'en');
+
+  // Listen for language changes
+  useEffect(() => {
+    const handleStorage = () => {
+      setLang(localStorage.getItem('app_language') || 'en');
+    };
+    window.addEventListener('storage', handleStorage);
+    // Also check periodically for same-tab changes
+    const interval = setInterval(() => {
+      const newLang = localStorage.getItem('app_language') || 'en';
+      if (newLang !== lang) setLang(newLang);
+    }, 500);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, [lang]);
+
+  const t = (key: string) => getTranslation(key, lang);
+
+  const navItems = [
+    { path: '/', label: t('today'), icon: '📅' },
+    { path: '/medications', label: t('medications'), icon: '💊' },
+    { path: '/adherence', label: t('adherence'), icon: '📊' },
+    { path: '/caregiver', label: t('caregiver'), icon: '👥' },
+    { path: '/settings', label: t('settings'), icon: '⚙️' },
+  ];
 
   const handleLogout = () => {
     dispatch(logout());
@@ -58,7 +80,7 @@ export function Navbar() {
               onClick={handleLogout}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
-              Logout
+              {t('logout')}
             </button>
           </div>
         </div>
