@@ -7,9 +7,10 @@ interface MedicationCardProps {
   medication: Medication;
   onTakeDose?: () => void;
   onClick?: () => void;
+  onDelete?: () => void;
 }
 
-export function MedicationCard({ medication, onTakeDose, onClick }: MedicationCardProps) {
+export function MedicationCard({ medication, onTakeDose, onClick, onDelete }: MedicationCardProps) {
   const isLowSupply = medication.currentSupply !== undefined && 
     medication.lowSupplyThreshold !== undefined &&
     medication.currentSupply <= medication.lowSupplyThreshold;
@@ -45,13 +46,18 @@ export function MedicationCard({ medication, onTakeDose, onClick }: MedicationCa
           )}
         </div>
       </div>
-      {onTakeDose && (
-        <div className="mt-4 pt-4 border-t">
-          <Button onClick={(e) => { e.stopPropagation(); onTakeDose(); }} className="w-full">
+      <div className="mt-4 pt-4 border-t flex gap-2">
+        {onTakeDose && (
+          <Button onClick={(e) => { e.stopPropagation(); onTakeDose(); }} className="flex-1">
             ✓ Take Dose
           </Button>
-        </div>
-      )}
+        )}
+        {onDelete && (
+          <Button variant="danger" onClick={(e) => { e.stopPropagation(); onDelete(); }} className={onTakeDose ? '' : 'w-full'}>
+            🗑️ Delete
+          </Button>
+        )}
+      </div>
     </Card>
   );
 }
