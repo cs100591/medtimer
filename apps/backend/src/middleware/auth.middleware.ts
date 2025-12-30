@@ -2,8 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import { authService, TokenPayload } from '../services/auth.service';
 import { AuthenticationError } from './error.middleware';
 
+// Extend Express Request with user property
 export interface AuthenticatedRequest extends Request {
   user?: TokenPayload;
+  body: any;
+  params: any;
+  query: any;
+  headers: any;
 }
 
 export const authenticate = (
