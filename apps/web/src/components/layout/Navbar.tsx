@@ -1,5 +1,7 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout } from '../../store/authSlice';
+import type { RootState } from '../../store';
 
 const navItems = [
   { path: '/', label: 'Today', icon: '📅' },
@@ -11,6 +13,14 @@ const navItems = [
 
 export function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -20,6 +30,7 @@ export function Navbar() {
             <span className="text-2xl">💊</span>
             <span className="font-bold text-xl text-gray-900">MedReminder</span>
           </Link>
+          
           <div className="flex items-center gap-1">
             {navItems.map((item) => (
               <Link
@@ -35,6 +46,20 @@ export function Navbar() {
                 <span className="hidden sm:inline">{item.label}</span>
               </Link>
             ))}
+          </div>
+
+          <div className="flex items-center gap-4">
+            {user && (
+              <span className="text-sm text-gray-600 hidden md:inline">
+                👤 {user.name || user.email}
+              </span>
+            )}
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>

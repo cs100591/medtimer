@@ -2,12 +2,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import medicationReducer from './medicationSlice';
 import adherenceReducer from './adherenceSlice';
 import reminderReducer from './reminderSlice';
+import authReducer from './authSlice';
 
 export const store = configureStore({
   reducer: {
     medications: medicationReducer,
     adherence: adherenceReducer,
     reminders: reminderReducer,
+    auth: authReducer,
   },
 });
 
