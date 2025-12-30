@@ -1,0 +1,55 @@
+name: medication_reminder
+description: Medication reminder mobile application with AI-driven personalization
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+  
+  # Local Storage
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  path_provider: ^2.1.1
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.2
+  
+  # Networking
+  dio: ^5.4.0
+  http: ^1.1.0
+  
+  # Utilities
+  intl: ^0.20.2
+  uuid: ^4.2.2
+  
+  # Notifications
+  flutter_local_notifications: ^17.0.0
+  
+  # Barcode Scanning
+  mobile_scanner: ^4.0.1
+  
+  # UI Components
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  build_runner: ^2.4.7
+  riverpod_generator: ^2.3.9
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/translations/

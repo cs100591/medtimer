@@ -1,0 +1,5 @@
+{
+    "kiroAgent.configureMCP": "Enabled",
+    "typescript.autoClosingTags": false,
+    "html.autoClosingTags": false
+}

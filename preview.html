@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedReminder - Medication Reminder App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .nav-btn.active { background-color: #dbeafe; color: #1d4ed8; }
+    .progress-ring { transform: rotate(-90deg); }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-sm border-b sticky top-0 z-10">
+    <div class="max-w-4xl mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">💊</span>
+          <span class="font-bold text-xl text-gray-900">MedReminder</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="showTab('today')" class="nav-btn active px-4 py-2 rounded-lg flex items-center gap-2 text-gray-600 hover:bg-gray-100" data-tab="today">
+            <span>📅</span><span class="hidden sm:inline">Today</span>
+          </button>
+          <button onclick="showTab('medications')" class="nav-btn px-4 py-2 rounded-lg flex items-center gap-2 text-gray-600 hover:bg-gray-100" data-tab="medications">
+            <span>💊</span><span class="hidden sm:inline">Medications</span>
+          </button>
+          <button onclick="showTab('adherence')" class="nav-btn px-4 py-2 rounded-lg flex items-center gap-2 text-gray-600 hover:bg-gray-100" data-tab="adherence">
+            <span>📊</span><span class="hidden sm:inline">Adherence</span>
+          </button>
+          <button onclick="showTab('caregiver')" class="nav-btn px-4 py-2 rounded-lg flex items-center gap-2 text-gray-600 hover:bg-gray-100" data-tab="caregiver">
+            <span>👥</span><span class="hidden sm:inline">Caregiver</span>
+          </button>
+          <button onclick="showTab('settings')" class="nav-btn px-4 py-2 rounded-lg flex items-center gap-2 text-gray-600 hover:bg-gray-100" data-tab="settings">
+            <span>⚙️</span><span class="hidden sm:inline">Settings</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-4xl mx-auto p-4 pb-20">
+    <!-- TODAY TAB -->
+    <div id="today" class="tab-content active">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Today's Reminders</h1>
+        <p class="text-gray-600">Monday, December 30, 2024</p>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-green-600" id="taken-count">3</div>
+          <div class="text-sm text-green-700">Taken</div>
+        </div>
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-yellow-600" id="pending-count">2</div>
+          <div class="text-sm text-yellow-700">Pending</div>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-red-600" id="missed-count">0</div>
+          <div class="text-sm text-red-700">Missed</div>
+        </div>
+      </div>
+
+      <!-- Reminder Cards -->
+      <div class="space-y-4" id="reminders-list">
+        <div class="bg-white rounded-xl shadow-sm border p-4 reminder-card" data-status="taken">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Lisinopril 10mg</h3>
+                <p class="text-sm text-gray-500">1 tablet • With food</p>
+                <p class="text-xs text-gray-400 mt-1">8:00 AM</p>
+              </div>
+            </div>
+            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">✓ Taken</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-4 reminder-card" data-status="taken">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-2xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Metformin 500mg</h3>
+                <p class="text-sm text-gray-500">1 tablet • After breakfast</p>
+                <p class="text-xs text-gray-400 mt-1">8:30 AM</p>
+              </div>
+            </div>
+            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">✓ Taken</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-4 reminder-card" data-status="taken">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-2xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Vitamin D3 2000IU</h3>
+                <p class="text-sm text-gray-500">1 capsule • With meal</p>
+                <p class="text-xs text-gray-400 mt-1">12:00 PM</p>
+              </div>
+            </div>
+            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">✓ Taken</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border-2 border-blue-300 p-4 reminder-card" data-status="pending" id="reminder-4">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-2xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Atorvastatin 20mg</h3>
+                <p class="text-sm text-gray-500">1 tablet • Evening dose</p>
+                <p class="text-xs text-blue-600 font-medium mt-1">⏰ 6:00 PM - Due now</p>
+              </div>
+            </div>
+            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">Pending</span>
+          </div>
+          <div class="flex gap-2 mt-3">
+            <button onclick="markTaken('reminder-4')" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition">✓ Take</button>
+            <button onclick="skipReminder('reminder-4')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium transition">Skip</button>
+            <button onclick="snoozeReminder('reminder-4')" class="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 py-2 px-4 rounded-lg font-medium transition">⏰ Snooze</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-4 reminder-card" data-status="pending" id="reminder-5">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-2xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Omeprazole 20mg</h3>
+                <p class="text-sm text-gray-500">1 capsule • Before bed</p>
+                <p class="text-xs text-gray-400 mt-1">9:00 PM</p>
+              </div>
+            </div>
+            <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">Upcoming</span>
+          </div>
+          <div class="flex gap-2 mt-3">
+            <button onclick="markTaken('reminder-5')" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition">✓ Take</button>
+            <button onclick="skipReminder('reminder-5')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium transition">Skip</button>
+            <button onclick="snoozeReminder('reminder-5')" class="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 py-2 px-4 rounded-lg font-medium transition">⏰ Snooze</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDICATIONS TAB -->
+    <div id="medications" class="tab-content">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">My Medications</h1>
+        <button onclick="showAddMedModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <span>+</span> Add Medication
+        </button>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+        <button class="filter-btn active px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterMeds('all')">All (5)</button>
+        <button class="filter-btn px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterMeds('active')">Active (4)</button>
+        <button class="filter-btn px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterMeds('low-supply')">Low Supply (1)</button>
+        <button class="filter-btn px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterMeds('inactive')">Inactive (1)</button>
+      </div>
+
+      <!-- Medication List -->
+      <div class="space-y-4">
+        <div class="bg-white rounded-xl shadow-sm border p-4 medication-card" data-type="active">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center text-3xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Lisinopril</h3>
+                <p class="text-sm text-gray-500">10mg • Tablet</p>
+                <p class="text-xs text-gray-400">Blood Pressure</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Active</span>
+              <p class="text-xs text-gray-400 mt-1">Daily at 8:00 AM</p>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t flex items-center justify-between">
+            <div class="flex items-center gap-4 text-sm">
+              <span class="text-gray-500">📦 45 pills left</span>
+              <span class="text-gray-500">💰 $12.99/month</span>
+            </div>
+            <button class="text-blue-500 hover:text-blue-700 text-sm font-medium">Edit</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-4 medication-card" data-type="active">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center text-3xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Metformin</h3>
+                <p class="text-sm text-gray-500">500mg • Tablet</p>
+                <p class="text-xs text-gray-400">Diabetes</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Active</span>
+              <p class="text-xs text-gray-400 mt-1">Daily at 8:30 AM</p>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t flex items-center justify-between">
+            <div class="flex items-center gap-4 text-sm">
+              <span class="text-gray-500">📦 60 pills left</span>
+              <span class="text-gray-500">💰 $8.50/month</span>
+            </div>
+            <button class="text-blue-500 hover:text-blue-700 text-sm font-medium">Edit</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-orange-200 p-4 medication-card" data-type="low-supply">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center text-3xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Atorvastatin</h3>
+                <p class="text-sm text-gray-500">20mg • Tablet</p>
+                <p class="text-xs text-gray-400">Cholesterol</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">Low Supply</span>
+              <p class="text-xs text-gray-400 mt-1">Daily at 6:00 PM</p>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t flex items-center justify-between">
+            <div class="flex items-center gap-4 text-sm">
+              <span class="text-orange-600 font-medium">⚠️ 5 pills left</span>
+              <span class="text-gray-500">💰 $15.00/month</span>
+            </div>
+            <div class="flex gap-2">
+              <button class="text-orange-500 hover:text-orange-700 text-sm font-medium">Refill</button>
+              <button class="text-blue-500 hover:text-blue-700 text-sm font-medium">Edit</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-4 medication-card" data-type="active">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center text-3xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Vitamin D3</h3>
+                <p class="text-sm text-gray-500">2000 IU • Capsule</p>
+                <p class="text-xs text-gray-400">Supplement</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Active</span>
+              <p class="text-xs text-gray-400 mt-1">Daily at 12:00 PM</p>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t flex items-center justify-between">
+            <div class="flex items-center gap-4 text-sm">
+              <span class="text-gray-500">📦 90 capsules left</span>
+              <span class="text-gray-500">💰 $6.99/month</span>
+            </div>
+            <button class="text-blue-500 hover:text-blue-700 text-sm font-medium">Edit</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-4 medication-card opacity-60" data-type="inactive">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center text-3xl">💊</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Amoxicillin</h3>
+                <p class="text-sm text-gray-500">500mg • Capsule</p>
+                <p class="text-xs text-gray-400">Antibiotic (completed)</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">Inactive</span>
+              <p class="text-xs text-gray-400 mt-1">Ended Dec 15</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADHERENCE TAB -->
+    <div id="adherence" class="tab-content">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Adherence Report</h1>
+        <p class="text-gray-600">Track your medication compliance</p>
+      </div>
+
+      <!-- Overall Score -->
+      <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-700">Overall Adherence</h2>
+            <p class="text-sm text
