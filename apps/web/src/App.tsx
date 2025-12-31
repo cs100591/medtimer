@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider, useSelector } from 'react-redux';
 import { store, RootState } from './store';
+import { TranslationProvider } from './i18n/TranslationContext';
 import { Navbar } from './components/layout/Navbar';
 import { HomePage } from './pages/HomePage';
 import { MedicationsPage } from './pages/MedicationsPage';
@@ -74,9 +75,11 @@ function AppRoutes() {
 function App() {
   return (
     <Provider store={store}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <TranslationProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </TranslationProvider>
     </Provider>
   );
 }

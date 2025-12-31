@@ -1,35 +1,15 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { useState, useEffect } from 'react';
 import { logout } from '../../store/authSlice';
 import type { RootState } from '../../store';
-import { getTranslation } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/TranslationContext';
 
 export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const [lang, setLang] = useState(localStorage.getItem('app_language') || 'en');
-
-  // Listen for language changes
-  useEffect(() => {
-    const handleStorage = () => {
-      setLang(localStorage.getItem('app_language') || 'en');
-    };
-    window.addEventListener('storage', handleStorage);
-    // Also check periodically for same-tab changes
-    const interval = setInterval(() => {
-      const newLang = localStorage.getItem('app_language') || 'en';
-      if (newLang !== lang) setLang(newLang);
-    }, 500);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      clearInterval(interval);
-    };
-  }, [lang]);
-
-  const t = (key: string) => getTranslation(key, lang);
+  const { t } = useTranslation();
 
   const navItems = [
     { path: '/', label: t('today'), icon: '📅' },

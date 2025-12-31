@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import 'home_page.dart';
 import '../themes/app_theme.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -68,6 +69,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         );
         ref.read(authProvider.notifier).clearError();
+      }
+    });
+
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.status == AuthStatus.authenticated) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
       }
     });
 
@@ -207,8 +216,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';
                       }
-                      if (!_isLogin && value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                      if (!_isLogin && value.length < 8) {
+                        return 'Password must be at least 8 characters';
+                      }
+                      if (!_isLogin && !RegExp(r'[A-Z]').hasMatch(value)) {
+                        return 'Password must include an uppercase letter';
+                      }
+                      if (!_isLogin && !RegExp(r'[a-z]').hasMatch(value)) {
+                        return 'Password must include a lowercase letter';
+                      }
+                      if (!_isLogin && !RegExp(r'[0-9]').hasMatch(value)) {
+                        return 'Password must include a number';
                       }
                       return null;
                     },

@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardTitle, CardContent } from '../components/ui/Card';
 import type { Medication } from '../types';
 import api from '../services/api';
+import { useTranslation } from '../i18n/TranslationContext';
 
 // Helper to calculate schedule times based on frequency and first dose time
 function calculateScheduleTimes(firstTime: string, frequency: number): string[] {
@@ -33,6 +34,7 @@ const sampleMedications: Medication[] = [
 ];
 
 export function MedicationsPage() {
+  const { t } = useTranslation();
   const [medications, setMedications] = useState<Medication[]>(() => {
     const saved = localStorage.getItem('medications');
     if (saved) {
@@ -45,14 +47,13 @@ export function MedicationsPage() {
     return sampleMedications;
   });
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'critical' | 'ongoing'>('all');
+  const [filter, setFilter] = useState<'all' | 'ongoing'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMed, setNewMed] = useState({
     name: '',
     amount: 1,
     unit: 'tablet' as DosageUnit,
     instructions: '',
-    isCritical: false,
     frequency: 1,
     firstDoseTime: '08:00',
     durationDays: 0, // 0 = ongoing, 1-99 = fixed days
@@ -96,7 +97,7 @@ export function MedicationsPage() {
       dosage: `${newMed.amount} ${newMed.unit}${newMed.unit === 'tablet' && newMed.amount > 1 ? 's' : ''}`,
       form: newMed.unit === 'tablet' ? 'tablet' : 'liquid',
       instructions: newMed.instructions,
-      isCritical: newMed.isCritical,
+      isCritical: false,
       isActive: true,
       frequency: newMed.frequency,
       firstDoseTime: newMed.firstDoseTime,
@@ -109,7 +110,7 @@ export function MedicationsPage() {
     // Add locally first
     setMedications(prev => [...prev, newMedication]);
     setShowAddForm(false);
-    setNewMed({ name: '', amount: 1, unit: 'tablet', instructions: '', isCritical: false, frequency: 1, firstDoseTime: '08:00', durationDays: 0 });
+    setNewMed({ name: '', amount: 1, unit: 'tablet', instructions: '', frequency: 1, firstDoseTime: '08:00', durationDays: 0 });
 
     // Try API call
     try {
@@ -131,7 +132,6 @@ export function MedicationsPage() {
   };
 
   const filteredMeds = medications.filter(m => {
-    if (filter === 'critical') return m.isCritical;
     if (filter === 'ongoing') return m.durationDays === 0 || m.durationDays === undefined;
     return true;
   });
@@ -139,17 +139,17 @@ export function MedicationsPage() {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Medications</h1>
-        <Button onClick={() => setShowAddForm(true)}>+ Add Medication</Button>
+        <h1 className="text-2xl font-bold text-gray-900">{t('myMedications')}</h1>
+        <Button onClick={() => setShowAddForm(true)}>+ {t('addMedication')}</Button>
       </div>
 
       {/* Add Medication Form */}
       {showAddForm && (
         <Card className="mb-6">
-          <CardTitle>Add New Medication</CardTitle>
+          <CardTitle>{t('addNewMedication')}</CardTitle>
           <CardContent className="mt-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Medication Name *</label>
+              <label className="block text-sm font-medium mb-1">{t('medicationName')} *</label>
               <input
                 type="text"
                 value={newMed.name}
@@ -160,7 +160,7 @@ export function MedicationsPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">💊 Dosage</label>
+              <label className="block text-sm font-medium mb-1">💊 {t('dosage')}</label>
               <div className="flex items-center gap-3">
                 <div className="flex gap-2 mb-2">
                   <button
@@ -172,7 +172,7 @@ export function MedicationsPage() {
                         : 'bg-white border-gray-300 hover:bg-gray-50'
                     }`}
                   >
-                    💊 Tablet
+                    💊 {t('tablet')}
                   </button>
                   <button
                     type="button"
@@ -183,7 +183,7 @@ export function MedicationsPage() {
                         : 'bg-white border-gray-300 hover:bg-gray-50'
                     }`}
                   >
-                    💧 ml (liquid)
+                    💧 {t('ml')}
                   </button>
                 </div>
               </div>
@@ -203,7 +203,7 @@ export function MedicationsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">⏰ First dose time</label>
+              <label className="block text-sm font-medium mb-1">⏰ {t('firstDoseTime')}</label>
               <input
                 type="time"
                 value={newMed.firstDoseTime}
@@ -213,7 +213,7 @@ export function MedicationsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">📅 Frequency per day</label>
+              <label className="block text-sm font-medium mb-1">📅 {t('frequencyPerDay')}</label>
               <div className="grid grid-cols-4 gap-2">
                 {[1, 2, 3, 4].map((freq) => (
                   <button
@@ -226,32 +226,32 @@ export function MedicationsPage() {
                         : 'bg-white border-gray-300 hover:bg-gray-50'
                     }`}
                   >
-                    {freq}x daily
+                    {freq}x {t('daily')}
                   </button>
                 ))}
               </div>
               {newMed.frequency > 1 && (
                 <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-700 font-medium">Scheduled times:</p>
+                  <p className="text-sm text-blue-700 font-medium">{t('scheduledTimes')}:</p>
                   <p className="text-sm text-blue-600">
                     {calculateScheduleTimes(newMed.firstDoseTime, newMed.frequency).join(' → ')}
                   </p>
                   <p className="text-xs text-blue-500 mt-1">
-                    (Every {Math.floor(24 / newMed.frequency)} hours)
+                    ({t('everyHours').replace('{hours}', String(Math.floor(24 / newMed.frequency)))})
                   </p>
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">📆 Duration (days)</label>
+              <label className="block text-sm font-medium mb-1">📆 {t('duration')} ({t('days')})</label>
               <div className="flex items-center gap-4 p-4 border rounded-lg">
                 <div className="flex-1">
                   <p className="text-lg font-bold">
-                    {newMed.durationDays === 0 ? 'Ongoing' : `${newMed.durationDays} days`}
+                    {newMed.durationDays === 0 ? t('ongoing') : `${newMed.durationDays} ${t('days')}`}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {newMed.durationDays === 0 ? 'No end date' : 'Fixed duration'}
+                    {newMed.durationDays === 0 ? t('noEndDate') : t('fixedDuration')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -274,11 +274,10 @@ export function MedicationsPage() {
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-1">0 = Ongoing (no end date), 1-99 = Fixed number of days</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Instructions</label>
+              <label className="block text-sm font-medium mb-1">{t('instructions')}</label>
               <textarea
                 value={newMed.instructions}
                 onChange={(e) => setNewMed({ ...newMed, instructions: e.target.value })}
@@ -288,19 +287,9 @@ export function MedicationsPage() {
               />
             </div>
             
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={newMed.isCritical}
-                onChange={(e) => setNewMed({ ...newMed, isCritical: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <label className="text-sm">⚠️ Mark as critical medication</label>
-            </div>
-            
             <div className="flex gap-2">
-              <Button onClick={handleAddMedication}>Save Medication</Button>
-              <Button variant="secondary" onClick={() => setShowAddForm(false)}>Cancel</Button>
+              <Button onClick={handleAddMedication}>{t('saveMedication')}</Button>
+              <Button variant="secondary" onClick={() => setShowAddForm(false)}>{t('cancel')}</Button>
             </div>
           </CardContent>
         </Card>
@@ -308,7 +297,7 @@ export function MedicationsPage() {
 
       {/* Filters */}
       <div className="flex gap-2 mb-6">
-        {(['all', 'critical', 'ongoing'] as const).map((f) => (
+        {(['all', 'ongoing'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -316,19 +305,19 @@ export function MedicationsPage() {
               filter === f ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            {f === 'all' ? 'All' : f === 'critical' ? '⚠️ Critical' : '♾️ Ongoing'}
+            {f === 'all' ? t('all') : `♾️ ${t('ongoing')}`}
           </button>
         ))}
       </div>
 
-      {loading && <p className="text-gray-500">Loading medications...</p>}
+      {loading && <p className="text-gray-500">{t('loading')}</p>}
 
       {/* Medication List */}
       <div className="space-y-4">
         {filteredMeds.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8 text-gray-500">
-              No medications found. Click "Add Medication" to get started.
+              {t('noMedications')}
             </CardContent>
           </Card>
         ) : (

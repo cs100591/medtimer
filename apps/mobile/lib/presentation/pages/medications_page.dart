@@ -115,13 +115,8 @@ class MedicationsPage extends ConsumerWidget {
               onTap: () => Navigator.pop(ctx),
             ),
             ListTile(
-              leading: const Icon(Icons.warning, color: Colors.red),
-              title: const Text('Critical only'),
-              onTap: () => Navigator.pop(ctx),
-            ),
-            ListTile(
-              leading: const Icon(Icons.water_drop, color: Colors.orange),
-              title: const Text('Low supply'),
+              leading: const Icon(Icons.loop, color: Colors.blue),
+              title: const Text('Ongoing only'),
               onTap: () => Navigator.pop(ctx),
             ),
           ],
@@ -253,7 +248,6 @@ class MedicationDetailsPage extends ConsumerWidget {
           
           _buildDetailRow(context, 'Instructions', medication.instructions ?? 'None'),
           _buildDetailRow(context, 'Duration', medication.durationDisplay),
-          _buildDetailRow(context, 'Critical', medication.isCritical ? 'Yes ⚠️' : 'No'),
         ],
       ),
     );
@@ -340,7 +334,6 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
   String _unit = 'tablet'; // 'tablet' or 'ml'
   int _frequency = 1;
   TimeOfDay _firstDoseTime = const TimeOfDay(hour: 8, minute: 0);
-  bool _isCritical = false;
   bool _isLoading = false;
   int _durationDays = 0; // 0 = ongoing, 1-99 = fixed days
 
@@ -572,15 +565,6 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
             ),
             const SizedBox(height: 16),
             
-            // Critical
-            SwitchListTile(
-              title: const Text('⚠️ Critical Medication'),
-              subtitle: const Text('Mark for emergency access'),
-              value: _isCritical,
-              onChanged: (v) => setState(() => _isCritical = v),
-            ),
-            const SizedBox(height: 16),
-            
             // Duration with up/down buttons
             Text('📆 Duration', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
@@ -684,7 +668,7 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
         instructions: _instructionsController.text.trim().isNotEmpty 
             ? _instructionsController.text.trim() 
             : null,
-        isCritical: _isCritical,
+        isCritical: false,
         frequency: _frequency,
         firstDoseTime: _firstDoseTimeString,
         scheduleTimes: _scheduleTimes,
