@@ -35,21 +35,15 @@ function calculateScheduleTimes(firstTime: string, frequency: number, mode: Freq
 
 type DosageUnit = 'tablet' | 'ml';
 
-const sampleMedications: Medication[] = [
-  { id: 'm1', userId: 'demo', name: 'Lisinopril', dosage: '2 tablets', form: 'tablet', instructions: 'Take once daily in the morning', isCritical: false, isActive: true, frequency: 1, firstDoseTime: '08:00', scheduleTimes: ['8:00 AM'], durationDays: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'm2', userId: 'demo', name: 'Metformin', dosage: '5 ml', form: 'liquid', instructions: 'Take with meals', isCritical: false, isActive: true, frequency: 2, firstDoseTime: '08:00', scheduleTimes: ['8:00 AM', '8:00 PM'], durationDays: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'm3', userId: 'demo', name: 'Antibiotics', dosage: '1 tablet', form: 'tablet', instructions: 'Take daily for infection', isCritical: false, isActive: true, frequency: 1, firstDoseTime: '09:00', scheduleTimes: ['9:00 AM'], durationDays: 7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-];
-
 export function MedicationsPage() {
   const { t } = useTranslation();
   const [medications, setMedications] = useState<Medication[]>(() => {
     const saved = localStorage.getItem('medications');
     if (saved) {
       try { return JSON.parse(saved); } 
-      catch { return sampleMedications; }
+      catch { return []; }
     }
-    return sampleMedications;
+    return [];
   });
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'ongoing'>('all');
