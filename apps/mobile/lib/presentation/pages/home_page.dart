@@ -62,11 +62,28 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-class _TodayTab extends ConsumerWidget {
+class _TodayTab extends ConsumerStatefulWidget {
   const _TodayTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TodayTab> createState() => _TodayTabState();
+}
+
+class _TodayTabState extends ConsumerState<_TodayTab> {
+  final Set<String> _expandedGroups = {};
+
+  void _toggleGroup(String time) {
+    setState(() {
+      if (_expandedGroups.contains(time)) {
+        _expandedGroups.remove(time);
+      } else {
+        _expandedGroups.add(time);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final now = DateTime.now();
     final userId = ref.watch(currentUserIdProvider);
@@ -104,7 +121,7 @@ class _TodayTab extends ConsumerWidget {
       ),
       body: userId == null
           ? const Center(child: CircularProgressIndicator())
-          : _buildBody(context, ref, userId),
+          : _buildBody(context, userId),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'today_fab',
         onPressed: () => _quickLogMedication(context),
@@ -114,7 +131,7 @@ class _TodayTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, String userId) {
+  Widget _buildBody(BuildContext context, String userId) {
     final medicationsAsync = ref.watch(medicationsProvider(userId));
 
     return RefreshIndicator(
@@ -151,12 +168,17 @@ class _TodayTab extends ConsumerWidget {
             }
           }
           
-          // Sort by time
-          reminders.sort((a, b) {
-            final timeA = _parseTime(a['time'] as String);
-            final timeB = _parseTime(b['time'] as String);
-            return timeA.compareTo(timeB);
-          });
+          // Group reminders by time
+          final groupedReminders = <String, List<Map<String, dynamic>>>{};
+          for (final reminder in reminders) {
+            final time = reminder['time'] as String;
+            groupedReminders.putIfAbsent(time, () => []);
+            groupedReminders[time]!.add(reminder);
+          }
+          
+          // Sort groups by time
+          final sortedTimes = groupedReminders.keys.toList()
+            ..sort((a, b) => _parseTime(a).compareTo(_parseTime(b)));
           
           return ListView(
             children: [
@@ -164,11 +186,23 @@ class _TodayTab extends ConsumerWidget {
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  "Today's Reminders",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Today's Reminders",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (sortedTimes.isNotEmpty)
+                      Text(
+                        'Tap a time slot to expand',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               if (reminders.isEmpty)
@@ -191,18 +225,20 @@ class _TodayTab extends ConsumerWidget {
                   ),
                 )
               else
-                ...reminders.map((reminder) {
-                  final med = reminder['medication'] as MedicationModel;
-                  final time = reminder['time'] as String;
-                  return ReminderCard(
-                    medicationName: med.name,
-                    dosage: med.dosage,
+                ...sortedTimes.map((time) {
+                  final groupReminders = groupedReminders[time]!;
+                  final isExpanded = _expandedGroups.contains(time);
+                  final hasCritical = groupReminders.any((r) => (r['medication'] as MedicationModel).isCritical);
+                  
+                  return _TimeGroupCard(
                     time: time,
-                    isPending: true,
-                    isCritical: med.isCritical,
-                    onTake: () => _handleTake(context, med.name),
-                    onSkip: () => _handleSkip(context, med.name),
-                    onSnooze: () => _handleSnooze(context, med.name),
+                    reminders: groupReminders,
+                    isExpanded: isExpanded,
+                    hasCritical: hasCritical,
+                    onToggle: () => _toggleGroup(time),
+                    onTake: (name) => _handleTake(context, name),
+                    onSkip: (name) => _handleSkip(context, name),
+                    onSnooze: (name) => _handleSnooze(context, name),
                   );
                 }),
               const SizedBox(height: 80),
@@ -383,6 +419,162 @@ class _TodayTab extends ConsumerWidget {
   void _quickLogMedication(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Quick log feature')),
+    );
+  }
+}
+
+// Time Group Card Widget - Expandable group of medications at same time
+class _TimeGroupCard extends StatelessWidget {
+  final String time;
+  final List<Map<String, dynamic>> reminders;
+  final bool isExpanded;
+  final bool hasCritical;
+  final VoidCallback onToggle;
+  final void Function(String) onTake;
+  final void Function(String) onSkip;
+  final void Function(String) onSnooze;
+
+  const _TimeGroupCard({
+    required this.time,
+    required this.reminders,
+    required this.isExpanded,
+    required this.hasCritical,
+    required this.onToggle,
+    required this.onTake,
+    required this.onSkip,
+    required this.onSnooze,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: hasCritical 
+            ? const BorderSide(color: Colors.red, width: 2)
+            : BorderSide.none,
+      ),
+      child: Column(
+        children: [
+          // Header - always visible, tappable
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Time icon
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.access_time, color: Colors.blue),
+                  ),
+                  const SizedBox(width: 12),
+                  // Time and count
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          time,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '${reminders.length} medication${reminders.length > 1 ? 's' : ''}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Medication avatars preview
+                  Row(
+                    children: [
+                      ...reminders.take(3).map((r) {
+                        final med = r['medication'] as MedicationModel;
+                        return Container(
+                          width: 32,
+                          height: 32,
+                          margin: const EdgeInsets.only(right: 4),
+                          decoration: BoxDecoration(
+                            color: med.isCritical ? Colors.red.shade100 : Colors.blue.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              med.name.substring(0, 1).toUpperCase(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: med.isCritical ? Colors.red : Colors.blue,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      if (reminders.length > 3)
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '+${reminders.length - 3}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  // Expand icon
+                  Icon(
+                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Expanded content
+          if (isExpanded) ...[
+            const Divider(height: 1),
+            Container(
+              color: Colors.grey.shade50,
+              child: Column(
+                children: reminders.map((reminder) {
+                  final med = reminder['medication'] as MedicationModel;
+                  return ReminderCard(
+                    medicationName: med.name,
+                    dosage: med.dosage,
+                    time: time,
+                    isPending: true,
+                    isCritical: med.isCritical,
+                    onTake: () => onTake(med.name),
+                    onSkip: () => onSkip(med.name),
+                    onSnooze: () => onSnooze(med.name),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -51,11 +51,137 @@ function parseTime(timeStr: string): number {
   return hours * 60 + minutes;
 }
 
+// Group reminders by time
+interface ReminderGroup {
+  time: string;
+  reminders: Reminder[];
+}
+
+function groupRemindersByTime(reminders: Reminder[]): ReminderGroup[] {
+  const groups: Map<string, Reminder[]> = new Map();
+  
+  reminders.forEach(reminder => {
+    const time = reminder.scheduledTime;
+    if (!groups.has(time)) {
+      groups.set(time, []);
+    }
+    groups.get(time)!.push(reminder);
+  });
+  
+  return Array.from(groups.entries())
+    .map(([time, reminders]) => ({ time, reminders }))
+    .sort((a, b) => parseTime(a.time) - parseTime(b.time));
+}
+
+// Expandable Time Group Component
+function TimeGroup({ 
+  group, 
+  expandedGroups, 
+  toggleGroup, 
+  onTake, 
+  onSkip, 
+  onSnooze,
+  isPending 
+}: { 
+  group: ReminderGroup;
+  expandedGroups: Set<string>;
+  toggleGroup: (time: string) => void;
+  onTake?: (id: string) => void;
+  onSkip?: (id: string) => void;
+  onSnooze?: (id: string) => void;
+  isPending: boolean;
+}) {
+  const isExpanded = expandedGroups.has(group.time);
+  const hasCritical = group.reminders.some(r => r.isCritical);
+  const allCompleted = group.reminders.every(r => r.status === 'completed');
+  
+  return (
+    <div className={`bg-white rounded-lg shadow-md overflow-hidden mb-3 ${hasCritical ? 'border-l-4 border-red-500' : ''}`}>
+      {/* Header - always visible */}
+      <button
+        onClick={() => toggleGroup(group.time)}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-full ${allCompleted ? 'bg-green-100' : 'bg-blue-100'}`}>
+            <span className="text-lg">{allCompleted ? '✅' : '⏰'}</span>
+          </div>
+          <div className="text-left">
+            <p className="font-semibold text-gray-900">{group.time}</p>
+            <p className="text-sm text-gray-500">
+              {group.reminders.length} medication{group.reminders.length > 1 ? 's' : ''}
+              {hasCritical && <span className="text-red-500 ml-1">⚠️</span>}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Medication pills preview */}
+          <div className="flex -space-x-2">
+            {group.reminders.slice(0, 3).map((r, i) => (
+              <div 
+                key={r.id}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white ${
+                  r.status === 'completed' ? 'bg-green-100 text-green-700' : 
+                  r.isCritical ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                }`}
+                title={r.medicationName}
+              >
+                {r.medicationName.charAt(0)}
+              </div>
+            ))}
+            {group.reminders.length > 3 && (
+              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold border-2 border-white">
+                +{group.reminders.length - 3}
+              </div>
+            )}
+          </div>
+          <svg 
+            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+      
+      {/* Expanded content */}
+      {isExpanded && (
+        <div className="border-t px-4 py-3 space-y-3 bg-gray-50">
+          {group.reminders.map((reminder) => (
+            <ReminderCard
+              key={reminder.id}
+              reminder={reminder}
+              onTake={isPending && onTake ? () => onTake(reminder.id) : undefined}
+              onSkip={isPending && onSkip ? () => onSkip(reminder.id) : undefined}
+              onSnooze={isPending && onSnooze ? () => onSnooze(reminder.id) : undefined}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function HomePage() {
   const dispatch = useDispatch();
   const { reminders, loading } = useSelector((state: RootState) => state.reminders);
   const [localReminders, setLocalReminders] = useState<Reminder[]>([]);
   const [snoozeId, setSnoozeId] = useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (time: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(time)) {
+        next.delete(time);
+      } else {
+        next.add(time);
+      }
+      return next;
+    });
+  };
 
   // Load medications and generate reminders
   useEffect(() => {
@@ -208,6 +334,10 @@ export function HomePage() {
 
   const pendingReminders = displayReminders.filter(r => r.status === 'pending');
   const completedReminders = displayReminders.filter(r => r.status === 'completed');
+  
+  // Group reminders by time
+  const pendingGroups = groupRemindersByTime(pendingReminders);
+  const completedGroups = groupRemindersByTime(completedReminders);
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -261,33 +391,40 @@ export function HomePage() {
         </Card>
       )}
 
-      {/* Pending Reminders */}
-      {pendingReminders.length > 0 && (
+      {/* Pending Reminders - Grouped by Time */}
+      {pendingGroups.length > 0 && (
         <>
           <h2 className="text-lg font-semibold mb-4">Upcoming Reminders</h2>
-          <div className="space-y-4 mb-6">
-            {pendingReminders.map((reminder) => (
-              <ReminderCard
-                key={reminder.id}
-                reminder={reminder}
-                onTake={() => handleTake(reminder.id)}
-                onSkip={() => handleSkip(reminder.id)}
-                onSnooze={() => handleSnooze(reminder.id)}
+          <p className="text-sm text-gray-500 mb-3">Tap a time slot to expand and see all medications</p>
+          <div className="mb-6">
+            {pendingGroups.map((group) => (
+              <TimeGroup
+                key={group.time}
+                group={group}
+                expandedGroups={expandedGroups}
+                toggleGroup={toggleGroup}
+                onTake={handleTake}
+                onSkip={handleSkip}
+                onSnooze={handleSnooze}
+                isPending={true}
               />
             ))}
           </div>
         </>
       )}
 
-      {/* Completed Reminders */}
-      {completedReminders.length > 0 && (
+      {/* Completed Reminders - Grouped by Time */}
+      {completedGroups.length > 0 && (
         <>
           <h2 className="text-lg font-semibold mb-4 text-green-700">✓ Completed</h2>
-          <div className="space-y-4 mb-6 opacity-75">
-            {completedReminders.map((reminder) => (
-              <ReminderCard
-                key={reminder.id}
-                reminder={reminder}
+          <div className="mb-6 opacity-75">
+            {completedGroups.map((group) => (
+              <TimeGroup
+                key={group.time}
+                group={group}
+                expandedGroups={expandedGroups}
+                toggleGroup={toggleGroup}
+                isPending={false}
               />
             ))}
           </div>
