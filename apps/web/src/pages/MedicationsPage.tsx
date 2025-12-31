@@ -1,30 +1,22 @@
 import { useState, useEffect } from 'react';
-import { MedicationCard } from '../components/MedicationCard';
-import { Button } from '../components/ui/Button';
-import { Card, CardTitle, CardContent } from '../components/ui/Card';
 import type { Medication } from '../types';
 import api from '../services/api';
 import { useTranslation } from '../i18n/TranslationContext';
 
-// Frequency mode: 24h = full day, 12h = waking hours only (8AM-8PM)
 type FrequencyMode = '24h' | '12h';
+type DosageUnit = 'tablet' | 'ml';
 
-// Helper to calculate schedule times based on frequency, first dose time, and mode
 function calculateScheduleTimes(firstTime: string, frequency: number, mode: FrequencyMode = '24h'): string[] {
   const times: string[] = [firstTime];
   if (frequency <= 1) return times;
   
   const [hours, minutes] = firstTime.split(':').map(Number);
-  // 24h mode = spread over 24 hours, 12h mode = spread over 12 waking hours
   const totalHours = mode === '24h' ? 24 : 12;
   const intervalHours = Math.floor(totalHours / frequency);
   
   for (let i = 1; i < frequency; i++) {
     let newHours = hours + (intervalHours * i);
-    // For 12h mode, cap at reasonable evening time (8PM = 20:00)
-    if (mode === '12h' && newHours > 20) {
-      newHours = 20;
-    }
+    if (mode === '12h' && newHours > 20) newHours = 20;
     newHours = newHours % 24;
     const period = newHours >= 12 ? 'PM' : 'AM';
     const displayHours = newHours > 12 ? newHours - 12 : (newHours === 0 ? 12 : newHours);
@@ -33,84 +25,57 @@ function calculateScheduleTimes(firstTime: string, frequency: number, mode: Freq
   return times;
 }
 
-type DosageUnit = 'tablet' | 'ml';
-
 export function MedicationsPage() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const isZh = lang === 'zh';
   const [medications, setMedications] = useState<Medication[]>(() => {
     const saved = localStorage.getItem('medications');
-    if (saved) {
-      try { return JSON.parse(saved); } 
-      catch { return []; }
-    }
+    if (saved) { try { return JSON.parse(saved); } catch { return []; } }
     return [];
   });
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'ongoing'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMed, setNewMed] = useState({
-    name: '',
-    amount: 1,
-    unit: 'tablet' as DosageUnit,
-    instructions: '',
-    frequency: 1,
-    frequencyMode: '12h' as FrequencyMode, // Default to waking hours
-    firstDoseTime: '08:00',
-    durationDays: 0,
+    name: '', amount: 1, unit: 'tablet' as DosageUnit, instructions: '',
+    frequency: 1, frequencyMode: '12h' as FrequencyMode, firstDoseTime: '08:00', durationDays: 0,
   });
 
-  useEffect(() => {
-    localStorage.setItem('medications', JSON.stringify(medications));
-  }, [medications]);
-
+  useEffect(() => { localStorage.setItem('medications', JSON.stringify(medications)); }, [medications]);
   useEffect(() => { loadMedications(); }, []);
 
   const loadMedications = async () => {
     setLoading(true);
     try {
       const response = await api.getMedications();
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-        setMedications(response.data);
-      }
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) setMedications(response.data);
     } catch (err) { console.log('Using local medications'); }
     finally { setLoading(false); }
   };
 
   const handleAddMedication = async () => {
     if (!newMed.name) { alert(t('fillAllFields')); return; }
-
     const scheduleTimes = calculateScheduleTimes(newMed.firstDoseTime, newMed.frequency, newMed.frequencyMode);
     
     const newMedication: Medication = {
-      id: `m${Date.now()}`,
-      userId: 'demo',
-      name: newMed.name,
+      id: `m${Date.now()}`, userId: 'demo', name: newMed.name,
       dosage: `${newMed.amount} ${newMed.unit}${newMed.unit === 'tablet' && newMed.amount > 1 ? 's' : ''}`,
-      form: newMed.unit === 'tablet' ? 'tablet' : 'liquid',
-      instructions: newMed.instructions,
-      isCritical: false,
-      isActive: true,
-      frequency: newMed.frequency,
-      firstDoseTime: newMed.firstDoseTime,
-      scheduleTimes: scheduleTimes,
-      durationDays: newMed.durationDays,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      form: newMed.unit === 'tablet' ? 'tablet' : 'liquid', instructions: newMed.instructions,
+      isCritical: false, isActive: true, frequency: newMed.frequency, firstDoseTime: newMed.firstDoseTime,
+      scheduleTimes, durationDays: newMed.durationDays,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
 
     setMedications(prev => [...prev, newMedication]);
     setShowAddForm(false);
     setNewMed({ name: '', amount: 1, unit: 'tablet', instructions: '', frequency: 1, frequencyMode: '12h', firstDoseTime: '08:00', durationDays: 0 });
-
-    try { await api.createMedication(newMedication); } 
-    catch (err) { console.log('Saved locally'); }
+    try { await api.createMedication(newMedication); } catch (err) { console.log('Saved locally'); }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm(t('confirmDelete'))) {
       setMedications(prev => prev.filter(m => m.id !== id));
-      try { await api.deleteMedication(id); } 
-      catch (err) { console.log('Deleted locally'); }
+      try { await api.deleteMedication(id); } catch (err) { console.log('Deleted locally'); }
     }
   };
 
@@ -119,161 +84,185 @@ export function MedicationsPage() {
     return true;
   });
 
-  const intervalHours = newMed.frequencyMode === '24h' 
-    ? Math.floor(24 / newMed.frequency) 
-    : Math.floor(12 / newMed.frequency);
+  const intervalHours = newMed.frequencyMode === '24h' ? Math.floor(24 / newMed.frequency) : Math.floor(12 / newMed.frequency);
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="max-w-4xl mx-auto px-4">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t('myMedications')}</h1>
-        <Button onClick={() => setShowAddForm(true)}>+ {t('addMedication')}</Button>
+        <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{t('myMedications')}</h1>
+        <button onClick={() => setShowAddForm(true)} className="btn-primary">+ {t('addMedication')}</button>
       </div>
 
       {showAddForm && (
-        <Card className="mb-6">
-          <CardTitle>{t('addNewMedication')}</CardTitle>
-          <CardContent className="mt-4 space-y-4">
+        <div className="card p-6 mb-6">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">{t('addNewMedication')}</h2>
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">{t('medicationName')} *</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">{t('medicationName')} *</label>
               <input type="text" value={newMed.name} onChange={(e) => setNewMed({ ...newMed, name: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2" placeholder="e.g., Lisinopril" />
+                className="input" placeholder="e.g., Lisinopril" />
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">💊 {t('dosage')}</label>
-              <div className="flex gap-2 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">💊 {t('dosage')}</label>
+              <div className="segmented-control mb-3">
                 <button type="button" onClick={() => setNewMed({ ...newMed, unit: 'tablet' })}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    newMed.unit === 'tablet' ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white border-gray-300 hover:bg-gray-50'
-                  }`}>
-                  💊 {t('tablet')}
-                </button>
+                  className={`segmented-item ${newMed.unit === 'tablet' ? 'active' : ''}`}>💊 {t('tablet')}</button>
                 <button type="button" onClick={() => setNewMed({ ...newMed, unit: 'ml' })}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    newMed.unit === 'ml' ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white border-gray-300 hover:bg-gray-50'
-                  }`}>
-                  💧 {t('ml')}
-                </button>
+                  className={`segmented-item ${newMed.unit === 'ml' ? 'active' : ''}`}>💧 {t('ml')}</button>
               </div>
               <div className="flex items-center gap-3">
                 <input type="range" min="1" max={newMed.unit === 'tablet' ? 10 : 50} value={newMed.amount}
-                  onChange={(e) => setNewMed({ ...newMed, amount: parseInt(e.target.value) })} className="flex-1" />
-                <span className="text-lg font-semibold w-24 text-center">{newMed.amount} {newMed.unit === 'tablet' ? '💊' : 'ml'}</span>
+                  onChange={(e) => setNewMed({ ...newMed, amount: parseInt(e.target.value) })} className="flex-1 accent-[var(--primary)]" />
+                <span className="text-lg font-semibold w-24 text-center font-mono">{newMed.amount} {newMed.unit === 'tablet' ? '💊' : 'ml'}</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">⏰ {t('firstDoseTime')}</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">⏰ {t('firstDoseTime')}</label>
               <input type="time" value={newMed.firstDoseTime} onChange={(e) => setNewMed({ ...newMed, firstDoseTime: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2" />
+                className="input" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">📅 {t('frequencyPerDay')}</label>
-              <div className="grid grid-cols-4 gap-2 mb-3">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">📅 {t('frequencyPerDay')}</label>
+              <div className="segmented-control mb-3">
                 {[1, 2, 3, 4].map((freq) => (
                   <button key={freq} type="button" onClick={() => setNewMed({ ...newMed, frequency: freq })}
-                    className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                      newMed.frequency === freq ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white border-gray-300 hover:bg-gray-50'
-                    }`}>
-                    {freq}x {t('daily')}
-                  </button>
+                    className={`segmented-item ${newMed.frequency === freq ? 'active' : ''}`}>{freq}x</button>
                 ))}
               </div>
               
-              {/* Frequency Mode Selection */}
               {newMed.frequency > 1 && (
-                <div className="mb-3">
-                  <label className="block text-sm font-medium mb-2">🌙 {t('frequencyMode')}</label>
-                  <div className="flex gap-2">
+                <>
+                  <div className="segmented-control mb-3">
                     <button type="button" onClick={() => setNewMed({ ...newMed, frequencyMode: '12h' })}
-                      className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                        newMed.frequencyMode === '12h' ? 'bg-green-100 border-green-500 text-green-700' : 'bg-white border-gray-300 hover:bg-gray-50'
-                      }`}>
-                      ☀️ {t('wakingHours')} (12h)
-                    </button>
+                      className={`segmented-item ${newMed.frequencyMode === '12h' ? 'active' : ''}`}>☀️ {t('wakingHours')}</button>
                     <button type="button" onClick={() => setNewMed({ ...newMed, frequencyMode: '24h' })}
-                      className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                        newMed.frequencyMode === '24h' ? 'bg-purple-100 border-purple-500 text-purple-700' : 'bg-white border-gray-300 hover:bg-gray-50'
-                      }`}>
-                      🌙 {t('fullDay')} (24h)
-                    </button>
+                      className={`segmented-item ${newMed.frequencyMode === '24h' ? 'active' : ''}`}>🌙 {t('fullDay')}</button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {newMed.frequencyMode === '12h' ? t('wakingHoursDesc') : t('fullDayDesc')}
-                  </p>
-                </div>
-              )}
-
-              {newMed.frequency > 1 && (
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-700 font-medium">{t('scheduledTimes')}:</p>
-                  <p className="text-sm text-blue-600">
-                    {calculateScheduleTimes(newMed.firstDoseTime, newMed.frequency, newMed.frequencyMode).join(' → ')}
-                  </p>
-                  <p className="text-xs text-blue-500 mt-1">
-                    ({t('everyHours').replace('{hours}', String(intervalHours))})
-                  </p>
-                </div>
+                  <div className="p-3 bg-[rgba(0,122,255,0.08)] rounded-[var(--radius-md)]">
+                    <p className="text-sm text-[var(--primary)] font-medium">{t('scheduledTimes')}:</p>
+                    <p className="text-sm text-[var(--primary)] font-mono">
+                      {calculateScheduleTimes(newMed.firstDoseTime, newMed.frequency, newMed.frequencyMode).join(' → ')}
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">({t('everyHours').replace('{hours}', String(intervalHours))})</p>
+                  </div>
+                </>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">📆 {t('duration')} ({t('days')})</label>
-              <div className="flex items-center gap-4 p-4 border rounded-lg">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">📆 {t('duration')}</label>
+              <div className="flex items-center gap-4 p-4 bg-[var(--surface-secondary)] rounded-[var(--radius-md)]">
                 <div className="flex-1">
-                  <p className="text-lg font-bold">{newMed.durationDays === 0 ? t('ongoing') : `${newMed.durationDays} ${t('days')}`}</p>
-                  <p className="text-xs text-gray-500">{newMed.durationDays === 0 ? t('noEndDate') : t('fixedDuration')}</p>
+                  <p className="text-lg font-semibold text-[var(--text-primary)]">{newMed.durationDays === 0 ? t('ongoing') : `${newMed.durationDays} ${t('days')}`}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{newMed.durationDays === 0 ? t('noEndDate') : t('fixedDuration')}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => setNewMed({ ...newMed, durationDays: Math.max(0, newMed.durationDays - 1) })}
                     disabled={newMed.durationDays === 0}
-                    className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 text-xl font-bold hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed">−</button>
-                  <span className="w-12 text-center text-xl font-bold">{newMed.durationDays}</span>
+                    className="w-10 h-10 rounded-full bg-[var(--primary)] text-white text-xl font-bold hover:opacity-90 disabled:opacity-30">−</button>
+                  <span className="w-12 text-center text-xl font-bold font-mono">{newMed.durationDays}</span>
                   <button type="button" onClick={() => setNewMed({ ...newMed, durationDays: Math.min(99, newMed.durationDays + 1) })}
                     disabled={newMed.durationDays === 99}
-                    className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 text-xl font-bold hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed">+</button>
+                    className="w-10 h-10 rounded-full bg-[var(--primary)] text-white text-xl font-bold hover:opacity-90 disabled:opacity-30">+</button>
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">{t('instructions')}</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">{t('instructions')}</label>
               <textarea value={newMed.instructions} onChange={(e) => setNewMed({ ...newMed, instructions: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2" placeholder="e.g., Take with food" rows={2} />
+                className="input min-h-[80px]" placeholder="e.g., Take with food" />
             </div>
             
-            <div className="flex gap-2">
-              <Button onClick={handleAddMedication}>{t('saveMedication')}</Button>
-              <Button variant="secondary" onClick={() => setShowAddForm(false)}>{t('cancel')}</Button>
+            <div className="flex gap-3 pt-2">
+              <button onClick={handleAddMedication} className="btn-primary flex-1">{t('saveMedication')}</button>
+              <button onClick={() => setShowAddForm(false)} className="btn-secondary flex-1">{t('cancel')}</button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      <div className="flex gap-2 mb-6">
+      <div className="segmented-control mb-6">
         {(['all', 'ongoing'] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === f ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}>
+          <button key={f} onClick={() => setFilter(f)} className={`segmented-item ${filter === f ? 'active' : ''}`}>
             {f === 'all' ? t('all') : `♾️ ${t('ongoing')}`}
           </button>
         ))}
       </div>
 
-      {loading && <p className="text-gray-500">{t('loading')}</p>}
+      {loading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-8 h-8 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
+        </div>
+      )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {filteredMeds.length === 0 ? (
-          <Card><CardContent className="text-center py-8 text-gray-500">{t('noMedications')}</CardContent></Card>
+          <div className="card p-8 text-center">
+            <div className="w-16 h-16 bg-[rgba(0,122,255,0.1)] rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">💊</span>
+            </div>
+            <p className="text-[var(--text-secondary)]">{t('noMedications')}</p>
+          </div>
         ) : (
           filteredMeds.map((med) => (
-            <MedicationCard key={med.id} medication={med} onDelete={() => handleDelete(med.id)} />
+            <MedicationCard key={med.id} medication={med} onDelete={() => handleDelete(med.id)} isZh={isZh} t={t} />
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+function MedicationCard({ medication, onDelete, isZh, t }: { medication: Medication; onDelete: () => void; isZh: boolean; t: (key: string) => string }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  return (
+    <div className="card overflow-hidden">
+      <button onClick={() => setExpanded(!expanded)} className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-secondary)] transition-colors">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-[rgba(0,122,255,0.12)] rounded-[var(--radius-md)] flex items-center justify-center">
+            <span className="text-2xl">💊</span>
+          </div>
+          <div className="text-left">
+            <p className="font-semibold text-[var(--text-primary)]">{medication.name}</p>
+            <p className="text-sm text-[var(--text-secondary)]">{medication.dosage}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`pill ${medication.durationDays === 0 ? 'pill-primary' : 'pill-warning'}`}>
+            {medication.durationDays === 0 ? '♾️' : `${medication.durationDays}d`}
+          </span>
+          <svg className={`w-5 h-5 text-[var(--text-tertiary)] transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+      
+      {expanded && (
+        <div className="border-t border-[var(--divider)] p-4 bg-[var(--surface-secondary)]">
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <p className="text-xs text-[var(--text-tertiary)] mb-1">{isZh ? '频率' : 'Frequency'}</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{medication.frequency}x {isZh ? '每日' : 'daily'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--text-tertiary)] mb-1">{isZh ? '时间' : 'Times'}</p>
+              <p className="text-sm font-medium text-[var(--text-primary)] font-mono">{medication.scheduleTimes?.join(', ') || medication.firstDoseTime}</p>
+            </div>
+          </div>
+          {medication.instructions && (
+            <div className="mb-4">
+              <p className="text-xs text-[var(--text-tertiary)] mb-1">{t('instructions')}</p>
+              <p className="text-sm text-[var(--text-primary)]">{medication.instructions}</p>
+            </div>
+          )}
+          <button onClick={onDelete} className="btn-danger w-full">🗑️ {isZh ? '删除' : 'Delete'}</button>
+        </div>
+      )}
     </div>
   );
 }

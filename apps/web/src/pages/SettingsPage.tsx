@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Card, CardTitle, CardContent } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
 import { useTranslation, Language } from '../i18n/TranslationContext';
 
 const STORAGE_KEYS = {
-  LANGUAGE: 'app_language',
-  FONT_SIZE: 'app_font_size',
-  HIGH_CONTRAST: 'app_high_contrast',
-  NOTIFICATIONS: 'app_notifications',
+  LANGUAGE: 'app_language', FONT_SIZE: 'app_font_size', HIGH_CONTRAST: 'app_high_contrast', NOTIFICATIONS: 'app_notifications',
 };
 
 export function SettingsPage() {
   const { t, lang, setLang } = useTranslation();
+  const isZh = lang === 'zh';
   const [fontSize, setFontSize] = useState(() => localStorage.getItem(STORAGE_KEYS.FONT_SIZE) || 'normal');
   const [highContrast, setHighContrast] = useState(() => localStorage.getItem(STORAGE_KEYS.HIGH_CONTRAST) === 'true');
   const [notifications, setNotifications] = useState(() => localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS) !== 'false');
@@ -29,113 +25,127 @@ export function SettingsPage() {
     else document.body.classList.remove('high-contrast');
   }, [highContrast]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, String(notifications));
-  }, [notifications]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, String(notifications)); }, [notifications]);
 
-  const handleLanguageChange = (newLang: string) => {
-    setLang(newLang as Language);
-    showSavedMessage();
-  };
+  const handleLanguageChange = (newLang: string) => { setLang(newLang as Language); showSavedMessage(); };
 
   const handleClearData = () => {
     if (confirm(t('confirmDeleteAll'))) {
-      localStorage.clear();
-      sessionStorage.clear();
-      alert(t('dataCleared'));
-      window.location.reload();
+      localStorage.clear(); sessionStorage.clear();
+      alert(t('dataCleared')); window.location.reload();
     }
   };
 
   const handleExportData = () => {
-    const data = {
-      settings: { language: lang, fontSize, highContrast, notifications },
-      exportedAt: new Date().toISOString(),
-    };
+    const data = { settings: { language: lang, fontSize, highContrast, notifications }, exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `medication-reminder-data-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `medcare-data-${new Date().toISOString().split('T')[0]}.json`; a.click();
     URL.revokeObjectURL(url);
   };
 
-  const showSavedMessage = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  const showSavedMessage = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('settings')}</h1>
+    <div className="max-w-2xl mx-auto px-4">
+      <h1 className="text-2xl font-semibold text-[var(--text-primary)] mb-6">{t('settings')}</h1>
 
-      {saved && <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg mb-4">{t('settingsSaved')}</div>}
+      {saved && (
+        <div className="bg-[rgba(50,215,75,0.1)] text-[var(--success)] px-4 py-3 rounded-[var(--radius-md)] mb-4 flex items-center gap-2">
+          <span>✓</span> {t('settingsSaved')}
+        </div>
+      )}
 
-      <Card className="mb-4">
-        <CardTitle>{t('accessibility')}</CardTitle>
-        <CardContent className="space-y-4 mt-4">
-          <div className="flex items-center justify-between">
+      {/* Accessibility */}
+      <div className="card mb-4">
+        <div className="p-4 border-b border-[var(--divider)]">
+          <h2 className="font-semibold text-[var(--text-primary)]">{t('accessibility')}</h2>
+        </div>
+        <div className="list-group">
+          <div className="list-item justify-between">
             <div>
-              <p className="font-medium">{t('language')}</p>
-              <p className="text-sm text-gray-500">{t('selectLanguage')}</p>
+              <p className="font-medium text-[var(--text-primary)]">{t('language')}</p>
+              <p className="text-sm text-[var(--text-secondary)]">{t('selectLanguage')}</p>
             </div>
-            <select value={lang} onChange={(e) => handleLanguageChange(e.target.value)} className="border rounded-lg px-3 py-2">
-              <option value="en">English</option>
-              <option value="zh">中文</option>
-            </select>
+            <div className="segmented-control">
+              <button onClick={() => handleLanguageChange('en')} className={`segmented-item ${lang === 'en' ? 'active' : ''}`}>EN</button>
+              <button onClick={() => handleLanguageChange('zh')} className={`segmented-item ${lang === 'zh' ? 'active' : ''}`}>中文</button>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="list-item justify-between">
             <div>
-              <p className="font-medium">{t('fontSize')}</p>
-              <p className="text-sm text-gray-500">{t('adjustFontSize')}</p>
+              <p className="font-medium text-[var(--text-primary)]">{t('fontSize')}</p>
+              <p className="text-sm text-[var(--text-secondary)]">{t('adjustFontSize')}</p>
             </div>
-            <select value={fontSize} onChange={(e) => { setFontSize(e.target.value); showSavedMessage(); }} className="border rounded-lg px-3 py-2">
+            <select value={fontSize} onChange={(e) => { setFontSize(e.target.value); showSavedMessage(); }} 
+              className="input w-auto min-w-[120px]">
               <option value="small">{t('small')}</option>
               <option value="normal">{t('normal')}</option>
               <option value="large">{t('large')}</option>
               <option value="extraLarge">{t('extraLarge')}</option>
             </select>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="list-item justify-between">
             <div>
-              <p className="font-medium">{t('highContrast')}</p>
-              <p className="text-sm text-gray-500">{t('increaseVisibility')}</p>
+              <p className="font-medium text-[var(--text-primary)]">{t('highContrast')}</p>
+              <p className="text-sm text-[var(--text-secondary)]">{t('increaseVisibility')}</p>
             </div>
-            <input type="checkbox" checked={highContrast} onChange={(e) => { setHighContrast(e.target.checked); showSavedMessage(); }} className="w-5 h-5 cursor-pointer" />
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={highContrast} onChange={(e) => { setHighContrast(e.target.checked); showSavedMessage(); }} className="sr-only peer" />
+              <div className="w-11 h-6 bg-[var(--border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary)]"></div>
+            </label>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="mb-4">
-        <CardTitle>{t('notifications')}</CardTitle>
-        <CardContent className="space-y-4 mt-4">
-          <div className="flex items-center justify-between">
+      {/* Notifications */}
+      <div className="card mb-4">
+        <div className="p-4 border-b border-[var(--divider)]">
+          <h2 className="font-semibold text-[var(--text-primary)]">{t('notifications')}</h2>
+        </div>
+        <div className="list-group">
+          <div className="list-item justify-between">
             <div>
-              <p className="font-medium">{t('pushNotifications')}</p>
-              <p className="text-sm text-gray-500">{t('receiveAlerts')}</p>
+              <p className="font-medium text-[var(--text-primary)]">{t('pushNotifications')}</p>
+              <p className="text-sm text-[var(--text-secondary)]">{t('receiveAlerts')}</p>
             </div>
-            <input type="checkbox" checked={notifications} onChange={(e) => { setNotifications(e.target.checked); showSavedMessage(); }} className="w-5 h-5 cursor-pointer" />
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={notifications} onChange={(e) => { setNotifications(e.target.checked); showSavedMessage(); }} className="sr-only peer" />
+              <div className="w-11 h-6 bg-[var(--border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary)]"></div>
+            </label>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="mb-4">
-        <CardTitle>{t('dataPrivacy')}</CardTitle>
-        <CardContent className="space-y-4 mt-4">
-          <Button variant="secondary" className="w-full" onClick={handleExportData}>📥 {t('exportData')}</Button>
-          <Button variant="danger" className="w-full" onClick={handleClearData}>🗑️ {t('deleteAllData')}</Button>
-        </CardContent>
-      </Card>
+      {/* Data & Privacy */}
+      <div className="card mb-4">
+        <div className="p-4 border-b border-[var(--divider)]">
+          <h2 className="font-semibold text-[var(--text-primary)]">{t('dataPrivacy')}</h2>
+        </div>
+        <div className="p-4 space-y-3">
+          <button onClick={handleExportData} className="btn-secondary w-full">📥 {t('exportData')}</button>
+          <button onClick={handleClearData} className="btn-danger w-full">🗑️ {t('deleteAllData')}</button>
+        </div>
+      </div>
 
-      <Card>
-        <CardTitle>{t('about')}</CardTitle>
-        <CardContent className="mt-4">
-          <p className="text-gray-600">MedReminder</p>
-          <p className="text-gray-600">{t('version')} 1.0.0</p>
-          <p className="text-sm text-gray-500 mt-2">{t('appDescription')}</p>
-        </CardContent>
-      </Card>
+      {/* About */}
+      <div className="card">
+        <div className="p-4 border-b border-[var(--divider)]">
+          <h2 className="font-semibold text-[var(--text-primary)]">{t('about')}</h2>
+        </div>
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-[var(--primary)] rounded-[var(--radius-md)] flex items-center justify-center">
+              <span className="text-2xl">💊</span>
+            </div>
+            <div>
+              <p className="font-semibold text-[var(--text-primary)]">MedCare</p>
+              <p className="text-sm text-[var(--text-secondary)]">{t('version')} 1.0.0</p>
+            </div>
+          </div>
+          <p className="text-sm text-[var(--text-secondary)]">{t('appDescription')}</p>
+        </div>
+      </div>
     </div>
   );
 }

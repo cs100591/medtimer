@@ -156,39 +156,38 @@ export function HomePage() {
   const pendingGroups = groupRemindersByTime(pendingReminders);
   const completedGroups = groupRemindersByTime(completedReminders);
 
-  const progressColor = progress >= 80 ? 'from-emerald-400 to-emerald-600' : progress >= 50 ? 'from-amber-400 to-amber-600' : 'from-indigo-400 to-indigo-600';
-  const ringColor = progress >= 80 ? '#10b981' : progress >= 50 ? '#f59e0b' : '#6366f1';
+  const progressColor = progress >= 80 ? 'var(--success)' : progress >= 50 ? 'var(--warning)' : 'var(--primary)';
 
   return (
     <div className="max-w-2xl mx-auto px-4">
       {/* Header */}
       <div className="mb-6">
-        <p className="text-sm font-medium text-indigo-600 mb-1">{dateStr}</p>
-        <h1 className="text-3xl font-bold text-gray-900">{isZh ? '今日提醒' : "Today's Reminders"}</h1>
+        <p className="text-sm font-medium text-[var(--primary)] mb-1">{dateStr}</p>
+        <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{isZh ? '今日提醒' : "Today's Reminders"}</h1>
       </div>
 
-      {/* Progress Card */}
-      <div className={`bg-gradient-to-br ${progressColor} rounded-3xl p-6 mb-6 text-white shadow-lg`}>
+      {/* Progress Card - iOS Style */}
+      <div className="card-elevated p-5 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-white/80 text-sm font-medium mb-1">{t('todaysProgress')}</p>
-            <p className="text-4xl font-bold mb-2">{completed} / {total}</p>
-            <p className="text-white/90 text-sm">{isZh ? '剂药物已服用' : 'doses taken'}</p>
+            <p className="text-[var(--text-secondary)] text-sm font-medium mb-1">{t('todaysProgress')}</p>
+            <p className="text-4xl font-bold text-[var(--text-primary)] font-mono">{completed}<span className="text-[var(--text-tertiary)]">/{total}</span></p>
+            <p className="text-[var(--text-secondary)] text-sm mt-1">{isZh ? '剂药物已服用' : 'doses taken'}</p>
             {completed === total && total > 0 && (
-              <div className="mt-3 inline-flex items-center gap-2 bg-white/20 backdrop-blur px-3 py-1.5 rounded-full">
-                <span>🎉</span>
-                <span className="text-sm font-medium">{isZh ? '全部完成！' : 'All done!'}</span>
+              <div className="mt-3 pill pill-success">
+                <span className="mr-1">🎉</span>
+                {isZh ? '全部完成！' : 'All done!'}
               </div>
             )}
           </div>
           <div className="relative w-24 h-24">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="8" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke="white" strokeWidth="8" 
+              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" strokeWidth="8" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke={progressColor} strokeWidth="8" 
                 strokeDasharray={`${progress * 2.64} 264`} strokeLinecap="round" className="progress-ring" />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl font-bold">{progress}%</span>
+              <span className="text-2xl font-bold font-mono" style={{ color: progressColor }}>{progress}%</span>
             </div>
           </div>
         </div>
@@ -196,7 +195,7 @@ export function HomePage() {
 
       {/* Snooze Toast */}
       {snoozeId && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-2 z-50 animate-bounce">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-[var(--warning)] text-white px-6 py-3 rounded-[var(--radius-lg)] shadow-lg flex items-center gap-2 z-50">
           <span className="text-xl">😴</span>
           <span className="font-medium">{t('snoozed')}</span>
         </div>
@@ -204,26 +203,26 @@ export function HomePage() {
 
       {loading && (
         <div className="flex items-center justify-center py-8">
-          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
         </div>
       )}
 
       {/* Empty State */}
       {total === 0 && !loading && (
-        <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-gray-100">
-          <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="card p-8 text-center">
+          <div className="w-20 h-20 bg-[rgba(0,122,255,0.1)] rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-4xl">💊</span>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('noMedicationsToday')}</h3>
-          <p className="text-gray-500 text-sm">{t('addMedicationsHint')}</p>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{t('noMedicationsToday')}</h3>
+          <p className="text-[var(--text-secondary)] text-sm">{t('addMedicationsHint')}</p>
         </div>
       )}
 
       {/* Pending Reminders */}
       {pendingGroups.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+          <h2 className="text-base font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 bg-[var(--primary)] rounded-full animate-pulse" />
             {t('upcomingReminders')}
           </h2>
           <div className="space-y-3">
@@ -248,8 +247,8 @@ export function HomePage() {
       {/* Completed Reminders */}
       {completedGroups.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-emerald-700 mb-3 flex items-center gap-2">
-            <span className="text-emerald-500">✓</span>
+          <h2 className="text-base font-semibold text-[var(--success)] mb-3 flex items-center gap-2">
+            <span>✓</span>
             {t('completed')}
           </h2>
           <div className="space-y-3 opacity-70">
@@ -271,7 +270,7 @@ export function HomePage() {
       {/* Reset Button */}
       {completed > 0 && (
         <div className="text-center pb-4">
-          <button onClick={handleReset} className="text-indigo-600 hover:text-indigo-800 text-sm font-medium underline underline-offset-2">
+          <button onClick={handleReset} className="btn-ghost text-sm">
             {t('resetReminders')}
           </button>
         </div>
@@ -294,15 +293,15 @@ function TimeGroupCard({ group, isExpanded, onToggle, onTake, onSkip, onSnooze, 
   const allCompleted = group.reminders.every(r => r.status === 'completed');
   
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 ${isExpanded ? 'shadow-md' : ''}`}>
-      <button onClick={onToggle} className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+    <div className={`card overflow-hidden transition-all duration-200 ${isExpanded ? 'shadow-md' : ''}`}>
+      <button onClick={onToggle} className="w-full px-4 py-4 flex items-center justify-between hover:bg-[var(--surface-secondary)] transition-colors">
         <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${allCompleted ? 'bg-emerald-100' : 'bg-indigo-100'}`}>
+          <div className={`w-12 h-12 rounded-[var(--radius-md)] flex items-center justify-center ${allCompleted ? 'bg-[rgba(50,215,75,0.12)]' : 'bg-[rgba(0,122,255,0.12)]'}`}>
             <span className="text-2xl">{allCompleted ? '✅' : '⏰'}</span>
           </div>
           <div className="text-left">
-            <p className="font-bold text-gray-900 text-lg">{group.time}</p>
-            <p className="text-sm text-gray-500">
+            <p className="font-semibold text-[var(--text-primary)] text-lg font-mono">{group.time}</p>
+            <p className="text-sm text-[var(--text-secondary)]">
               {group.reminders.length} {group.reminders.length > 1 ? t('medicationsPlural') : t('medication')}
             </p>
           </div>
@@ -310,26 +309,26 @@ function TimeGroupCard({ group, isExpanded, onToggle, onTake, onSkip, onSnooze, 
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
             {group.reminders.slice(0, 3).map((r) => (
-              <div key={r.id} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm ${
-                r.status === 'completed' ? 'bg-emerald-500 text-white' : 'bg-indigo-500 text-white'
+              <div key={r.id} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 border-[var(--surface)] ${
+                r.status === 'completed' ? 'bg-[var(--success)] text-white' : 'bg-[var(--primary)] text-white'
               }`}>
                 {r.medicationName.charAt(0)}
               </div>
             ))}
             {group.reminders.length > 3 && (
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold border-2 border-white">
+              <div className="w-8 h-8 rounded-full bg-[var(--surface-secondary)] flex items-center justify-center text-xs font-semibold border-2 border-[var(--surface)]">
                 +{group.reminders.length - 3}
               </div>
             )}
           </div>
-          <svg className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-5 h-5 text-[var(--text-tertiary)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
       </button>
       
       {isExpanded && (
-        <div className="border-t border-gray-100 px-4 py-3 space-y-3 bg-gray-50/50">
+        <div className="border-t border-[var(--divider)] px-4 py-3 space-y-3 bg-[var(--surface-secondary)]">
           {group.reminders.map((reminder) => (
             <MedicationItem 
               key={reminder.id} 
@@ -358,15 +357,15 @@ function MedicationItem({ reminder, onTake, onSkip, onSnooze, isZh, t }: {
   const isCompleted = reminder.status === 'completed';
   
   return (
-    <div className={`bg-white rounded-xl p-4 ${isCompleted ? 'opacity-60' : ''}`}>
+    <div className={`bg-[var(--surface)] rounded-[var(--radius-md)] p-4 ${isCompleted ? 'opacity-60' : ''}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isCompleted ? 'bg-emerald-100' : 'bg-indigo-100'}`}>
+          <div className={`w-10 h-10 rounded-[var(--radius-sm)] flex items-center justify-center ${isCompleted ? 'bg-[rgba(50,215,75,0.12)]' : 'bg-[rgba(0,122,255,0.12)]'}`}>
             <span className="text-xl">💊</span>
           </div>
           <div>
-            <p className="font-semibold text-gray-900">{reminder.medicationName}</p>
-            <p className="text-sm text-gray-500">{reminder.dosage}</p>
+            <p className="font-semibold text-[var(--text-primary)]">{reminder.medicationName}</p>
+            <p className="text-sm text-[var(--text-secondary)]">{reminder.dosage}</p>
           </div>
         </div>
         {isCompleted && (
@@ -376,13 +375,13 @@ function MedicationItem({ reminder, onTake, onSkip, onSnooze, isZh, t }: {
       
       {!isCompleted && onTake && (
         <div className="flex gap-2">
-          <button onClick={onTake} className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors">
+          <button onClick={onTake} className="btn-success flex-1 py-2.5">
             ✓ {t('takeDose')}
           </button>
-          <button onClick={onSnooze} className="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-medium rounded-xl transition-colors">
+          <button onClick={onSnooze} className="px-4 py-2.5 bg-[rgba(255,149,0,0.12)] hover:bg-[rgba(255,149,0,0.2)] text-[var(--warning)] font-medium rounded-[var(--radius-md)] transition-colors">
             😴
           </button>
-          <button onClick={onSkip} className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium rounded-xl transition-colors">
+          <button onClick={onSkip} className="btn-secondary px-4 py-2.5">
             {t('skip')}
           </button>
         </div>

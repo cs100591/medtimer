@@ -65,48 +65,48 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-indigo-200">
+          <div className="w-20 h-20 bg-[var(--primary)] rounded-[var(--radius-xl)] flex items-center justify-center mx-auto shadow-lg">
             <span className="text-4xl">💊</span>
           </div>
-          <h1 className="text-3xl font-bold mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            MedReminder
+          <h1 className="text-3xl font-semibold mt-6 text-[var(--text-primary)]">
+            MedCare
           </h1>
-          <p className="text-gray-500 mt-2">{t('yourCompanion')}</p>
+          <p className="text-[var(--text-secondary)] mt-2">{t('yourCompanion')}</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl shadow-gray-200/50 p-8 border border-white">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">{isZh ? '欢迎回来' : 'Welcome back'}</h2>
+        <div className="card-elevated p-8">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">{isZh ? '欢迎回来' : 'Welcome back'}</h2>
           
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
+              <div className="bg-[rgba(255,59,48,0.1)] text-[var(--danger)] px-4 py-3 rounded-[var(--radius-md)] text-sm font-medium flex items-center gap-2">
                 <span>⚠️</span> {error}
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('email')}</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">{t('email')}</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-modern"
+                className="input"
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('password')}</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">{t('password')}</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-modern"
+                className="input"
                 placeholder="••••••••"
               />
             </div>
@@ -114,7 +114,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all duration-200 disabled:opacity-50"
+              className="btn-primary w-full py-4"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -129,18 +129,18 @@ export function LoginPage() {
           <div className="mt-6 text-center">
             <button
               onClick={handleDemoLogin}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors"
+              className="btn-secondary"
             >
-              <span>🚀</span>
+              <span className="mr-2">🚀</span>
               {t('demoLogin')}
             </button>
           </div>
 
           {/* Register Link */}
-          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-            <p className="text-gray-600">
+          <div className="mt-8 pt-6 border-t border-[var(--divider)] text-center">
+            <p className="text-[var(--text-secondary)]">
               {t('noAccount')}{' '}
-              <Link to="/register" className="text-indigo-600 hover:text-indigo-800 font-semibold">
+              <Link to="/register" className="text-[var(--primary)] font-semibold hover:underline">
                 {t('register')}
               </Link>
             </p>
@@ -148,8 +148,8 @@ export function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-400 text-sm mt-8">
-          {isZh ? '安全、私密、可靠' : 'Secure • Private • Reliable'}
+        <p className="text-center text-[var(--text-tertiary)] text-sm mt-8">
+          {isZh ? '安全 · 私密 · 可靠' : 'Secure · Private · Reliable'}
         </p>
       </div>
     </div>
