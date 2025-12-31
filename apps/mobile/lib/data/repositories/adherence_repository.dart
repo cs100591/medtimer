@@ -1,14 +1,24 @@
-import 'dart:convert';
 import '../datasources/local_database.dart';
+import '../datasources/api_service.dart';
 import '../models/adherence_model.dart';
 
 class AdherenceRepository {
+  final LocalDatabase _localDb = LocalDatabase();
+  final ApiService _apiService = ApiService();
+
   // Log adherence record
   Future<AdherenceModel> logAdherence(AdherenceModel record) async {
-    final db = await LocalDatabase.database;
-    await db.insert('adherence_records', _toRow(record));
+    // Save locally first
+    await _localDb.saveAdherenceRecord(record.toJson());
     
-    await _addToSyncQueue('adherence_records', record.id, 'create', record.toJson());
+    // Try to sync with server
+    if (!_apiService.isOfflineMode) {
+      try {
+        await _apiService.recordAdherence(record.toJson());
+      } catch (e) {
+        // Will sync later
+      }
+    }
     
     return record;
   }
@@ -19,47 +29,45 @@ class AdherenceRepository {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    final db = await LocalDatabase.database;
+    // Try API first
+    if (!_apiService.isOfflineMode) {
+      try {
+        final records = await _apiService.getAdherenceRecords(
+          medicationId: medicationId,
+          startDate: startDate,
+          endDate: endDate,
+        );
+        return records.map((r) => AdherenceModel.fromJson(r as Map<String, dynamic>)).toList();
+      } catch (e) {
+        // Fall back to local
+      }
+    }
     
-    String where = 'medication_id = ?';
-    List<dynamic> whereArgs = [medicationId];
+    // Get from local database
+    final records = await _localDb.getAdherenceRecordsByMedication(medicationId);
+    var filtered = records.map((r) => AdherenceModel.fromJson(r)).toList();
     
     if (startDate != null) {
-      where += ' AND scheduled_time >= ?';
-      whereArgs.add(startDate.toIso8601String());
+      filtered = filtered.where((r) => r.scheduledTime.isAfter(startDate)).toList();
     }
     if (endDate != null) {
-      where += ' AND scheduled_time <= ?';
-      whereArgs.add(endDate.toIso8601String());
+      filtered = filtered.where((r) => r.scheduledTime.isBefore(endDate)).toList();
     }
     
-    final results = await db.query(
-      'adherence_records',
-      where: where,
-      whereArgs: whereArgs,
-      orderBy: 'scheduled_time DESC',
-    );
-
-    return results.map((row) => _fromRow(row)).toList();
+    filtered.sort((a, b) => b.scheduledTime.compareTo(a.scheduledTime));
+    return filtered;
   }
 
   // Get today's adherence records for a user
   Future<List<AdherenceModel>> getTodayAdherence(String userId) async {
-    final db = await LocalDatabase.database;
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
     
-    final results = await db.rawQuery('''
-      SELECT ar.* FROM adherence_records ar
-      INNER JOIN medications m ON ar.medication_id = m.id
-      WHERE m.user_id = ?
-        AND ar.scheduled_time >= ?
-        AND ar.scheduled_time < ?
-      ORDER BY ar.scheduled_time ASC
-    ''', [userId, startOfDay.toIso8601String(), endOfDay.toIso8601String()]);
-
-    return results.map((row) => _fromRow(row)).toList();
+    final records = await _localDb.getAdherenceRecordsByDateRange(startOfDay, endOfDay);
+    final filtered = records.map((r) => AdherenceModel.fromJson(r)).toList();
+    filtered.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+    return filtered;
   }
 
   // Calculate adherence rate for a period
@@ -80,96 +88,54 @@ class AdherenceRepository {
     return taken / records.length;
   }
 
-  // Get pending reminders (scheduled but not logged)
-  Future<List<Map<String, dynamic>>> getPendingReminders(String userId) async {
-    final db = await LocalDatabase.database;
-    final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
+  // Get adherence stats
+  Future<Map<String, dynamic>> getAdherenceStats({String? medicationId, int days = 30}) async {
+    if (!_apiService.isOfflineMode) {
+      try {
+        return await _apiService.getAdherenceStats(medicationId: medicationId, days: days);
+      } catch (e) {
+        // Fall back to local calculation
+      }
+    }
     
-    final results = await db.rawQuery('''
-      SELECT s.*, m.name as medication_name, m.dosage, m.form
-      FROM schedules s
-      INNER JOIN medications m ON s.medication_id = m.id
-      WHERE m.user_id = ?
-        AND m.is_active = 1
-        AND s.is_active = 1
-        AND NOT EXISTS (
-          SELECT 1 FROM adherence_records ar
-          WHERE ar.schedule_id = s.id
-            AND ar.scheduled_time >= ?
-        )
-    ''', [userId, startOfDay.toIso8601String()]);
-
-    return results;
+    final endDate = DateTime.now();
+    final startDate = endDate.subtract(Duration(days: days));
+    final records = await _localDb.getAdherenceRecordsByDateRange(startDate, endDate);
+    
+    final total = records.length;
+    final taken = records.where((r) => r['status'] == 'taken').length;
+    
+    return {
+      'adherenceRate': total > 0 ? taken / total : 0.0,
+      'totalDoses': total,
+      'takenDoses': taken,
+    };
   }
 
   // Update adherence record
   Future<void> updateAdherence(String id, AdherenceStatus status, {String? notes}) async {
-    final db = await LocalDatabase.database;
-    final updates = <String, dynamic>{
-      'status': status.name,
-      'actual_time': status == AdherenceStatus.taken ? DateTime.now().toIso8601String() : null,
-    };
-    if (notes != null) updates['notes'] = notes;
+    final records = await _localDb.getAdherenceRecords();
+    final index = records.indexWhere((r) => r['id'] == id);
     
-    await db.update(
-      'adherence_records',
-      updates,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    if (index != -1) {
+      records[index]['status'] = status.name;
+      records[index]['notes'] = notes;
+      if (status == AdherenceStatus.taken) {
+        records[index]['actualTime'] = DateTime.now().toIso8601String();
+      }
+      await _localDb.updateAdherenceRecord(id, records[index]);
+    }
     
-    await _addToSyncQueue('adherence_records', id, 'update', {
-      'id': id,
-      'status': status.name,
-      'notes': notes,
-    });
-  }
-
-  AdherenceModel _fromRow(Map<String, dynamic> row) {
-    return AdherenceModel(
-      id: row['id'] as String,
-      medicationId: row['medication_id'] as String,
-      scheduleId: row['schedule_id'] as String,
-      scheduledTime: DateTime.parse(row['scheduled_time'] as String),
-      actualTime: row['actual_time'] != null
-          ? DateTime.parse(row['actual_time'] as String)
-          : null,
-      status: AdherenceStatus.values.firstWhere(
-        (e) => e.name == row['status'],
-        orElse: () => AdherenceStatus.missed,
-      ),
-      notes: row['notes'] as String?,
-      createdAt: DateTime.parse(row['created_at'] as String),
-    );
-  }
-
-  Map<String, dynamic> _toRow(AdherenceModel r) {
-    return {
-      'id': r.id,
-      'medication_id': r.medicationId,
-      'schedule_id': r.scheduleId,
-      'scheduled_time': r.scheduledTime.toIso8601String(),
-      'actual_time': r.actualTime?.toIso8601String(),
-      'status': r.status.name,
-      'notes': r.notes,
-      'created_at': r.createdAt.toIso8601String(),
-    };
-  }
-
-  Future<void> _addToSyncQueue(
-    String tableName,
-    String recordId,
-    String operation,
-    Map<String, dynamic> data,
-  ) async {
-    final db = await LocalDatabase.database;
-    await db.insert('sync_queue', {
-      'table_name': tableName,
-      'record_id': recordId,
-      'operation': operation,
-      'data': jsonEncode(data),
-      'created_at': DateTime.now().toIso8601String(),
-    });
+    // Try to sync with server
+    if (!_apiService.isOfflineMode) {
+      try {
+        await _apiService.updateAdherence(id, {
+          'status': status.name,
+          'notes': notes,
+        });
+      } catch (e) {
+        // Will sync later
+      }
+    }
   }
 }
