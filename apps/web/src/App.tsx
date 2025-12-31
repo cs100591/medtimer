@@ -35,9 +35,9 @@ function AppRoutes() {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
       {isAuthenticated && <Navbar />}
-      <main className={isAuthenticated ? "py-6" : ""}>
+      <main className={isAuthenticated ? "pb-24 sm:pb-8 pt-4 sm:pt-6" : ""}>
         <Routes>
           {/* Auth routes */}
           <Route path="/login" element={

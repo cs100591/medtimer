@@ -1,20 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { ReminderCard } from '../components/ReminderCard';
-import { Card, CardContent } from '../components/ui/Card';
 import { setReminders, markTaken, markSkipped, setLoading } from '../store/reminderSlice';
 import type { RootState } from '../store';
 import type { Reminder, Medication } from '../types';
 import api from '../services/api';
 import { useTranslation } from '../i18n/TranslationContext';
 
-// Generate today's reminders from medications
 function generateRemindersFromMedications(medications: Medication[]): Reminder[] {
   const reminders: Reminder[] = [];
-  
   medications.forEach(med => {
     if (!med.isActive) return;
-    
     const scheduleTimes = med.scheduleTimes || ['8:00 AM'];
     scheduleTimes.forEach((time, index) => {
       reminders.push({
@@ -28,7 +23,6 @@ function generateRemindersFromMedications(medications: Medication[]): Reminder[]
       });
     });
   });
-  
   return reminders.sort((a, b) => parseTime(a.scheduledTime) - parseTime(b.scheduledTime));
 }
 
@@ -60,70 +54,9 @@ function groupRemindersByTime(reminders: Reminder[]): ReminderGroup[] {
     .sort((a, b) => parseTime(a.time) - parseTime(b.time));
 }
 
-function TimeGroup({ group, expandedGroups, toggleGroup, onTake, onSkip, onSnooze, isPending, t }: { 
-  group: ReminderGroup;
-  expandedGroups: Set<string>;
-  toggleGroup: (time: string) => void;
-  onTake?: (id: string) => void;
-  onSkip?: (id: string) => void;
-  onSnooze?: (id: string) => void;
-  isPending: boolean;
-  t: (key: string) => string;
-}) {
-  const isExpanded = expandedGroups.has(group.time);
-  const hasCritical = group.reminders.some(r => r.isCritical);
-  const allCompleted = group.reminders.every(r => r.status === 'completed');
-  
-  return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden mb-3 ${hasCritical ? 'border-l-4 border-red-500' : ''}`}>
-      <button onClick={() => toggleGroup(group.time)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-full ${allCompleted ? 'bg-green-100' : 'bg-blue-100'}`}>
-            <span className="text-lg">{allCompleted ? '✅' : '⏰'}</span>
-          </div>
-          <div className="text-left">
-            <p className="font-semibold text-gray-900">{group.time}</p>
-            <p className="text-sm text-gray-500">
-              {group.reminders.length} {group.reminders.length > 1 ? t('medicationsPlural') : t('medication')}
-              {hasCritical && <span className="text-red-500 ml-1">⚠️</span>}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex -space-x-2">
-            {group.reminders.slice(0, 3).map((r) => (
-              <div key={r.id} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white ${
-                r.status === 'completed' ? 'bg-green-100 text-green-700' : r.isCritical ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-              }`} title={r.medicationName}>
-                {r.medicationName.charAt(0)}
-              </div>
-            ))}
-            {group.reminders.length > 3 && (
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold border-2 border-white">+{group.reminders.length - 3}</div>
-            )}
-          </div>
-          <svg className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-      </button>
-      {isExpanded && (
-        <div className="border-t px-4 py-3 space-y-3 bg-gray-50">
-          {group.reminders.map((reminder) => (
-            <ReminderCard key={reminder.id} reminder={reminder}
-              onTake={isPending && onTake ? () => onTake(reminder.id) : undefined}
-              onSkip={isPending && onSkip ? () => onSkip(reminder.id) : undefined}
-              onSnooze={isPending && onSnooze ? () => onSnooze(reminder.id) : undefined}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function HomePage() {
   const { t, lang } = useTranslation();
+  const isZh = lang === 'zh';
   const dispatch = useDispatch();
   const { reminders, loading } = useSelector((state: RootState) => state.reminders);
   const [localReminders, setLocalReminders] = useState<Reminder[]>([]);
@@ -186,8 +119,6 @@ export function HomePage() {
     setLocalReminders(updatedReminders);
     dispatch(markSkipped(id));
     saveReminderStatuses(updatedReminders);
-    const reminder = displayReminders.find(r => r.id === id);
-    if (reminder) { try { await api.markSkipped(reminder.medicationId, 'User skipped'); } catch (err) { console.log('Saved locally'); } }
   };
 
   const handleSnooze = async (id: string) => {
@@ -210,15 +141,13 @@ export function HomePage() {
       return r;
     });
     setLocalReminders(updatedReminders);
-    const reminder = displayReminders.find(r => r.id === id);
-    if (reminder) { try { await api.snooze(reminder.medicationId, 15); } catch (err) { console.log('Snoozed locally'); } }
     setTimeout(() => setSnoozeId(null), 2000);
   };
 
   const handleReset = () => { localStorage.removeItem('reminderStatuses'); loadRemindersFromMedications(); };
 
   const today = new Date();
-  const dateStr = today.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const dateStr = today.toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const completed = displayReminders.filter(r => r.status === 'completed').length;
   const total = displayReminders.length;
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -227,75 +156,236 @@ export function HomePage() {
   const pendingGroups = groupRemindersByTime(pendingReminders);
   const completedGroups = groupRemindersByTime(completedReminders);
 
+  const progressColor = progress >= 80 ? 'from-emerald-400 to-emerald-600' : progress >= 50 ? 'from-amber-400 to-amber-600' : 'from-indigo-400 to-indigo-600';
+  const ringColor = progress >= 80 ? '#10b981' : progress >= 50 ? '#f59e0b' : '#6366f1';
+
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="max-w-2xl mx-auto px-4">
+      {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t('today')}</h1>
-        <p className="text-gray-600">{dateStr}</p>
+        <p className="text-sm font-medium text-indigo-600 mb-1">{dateStr}</p>
+        <h1 className="text-3xl font-bold text-gray-900">{isZh ? '今日提醒' : "Today's Reminders"}</h1>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      {/* Progress Card */}
+      <div className={`bg-gradient-to-br ${progressColor} rounded-3xl p-6 mb-6 text-white shadow-lg`}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500">{t('todaysProgress')}</p>
-            <p className="text-2xl font-bold">{completed} {t('of')} {total} {t('taken')}</p>
+            <p className="text-white/80 text-sm font-medium mb-1">{t('todaysProgress')}</p>
+            <p className="text-4xl font-bold mb-2">{completed} / {total}</p>
+            <p className="text-white/90 text-sm">{isZh ? '剂药物已服用' : 'doses taken'}</p>
+            {completed === total && total > 0 && (
+              <div className="mt-3 inline-flex items-center gap-2 bg-white/20 backdrop-blur px-3 py-1.5 rounded-full">
+                <span>🎉</span>
+                <span className="text-sm font-medium">{isZh ? '全部完成！' : 'All done!'}</span>
+              </div>
+            )}
           </div>
-          <div className="relative w-16 h-16">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="16" fill="none" stroke="#e5e7eb" strokeWidth="3" />
-              <circle cx="18" cy="18" r="16" fill="none" stroke="#3b82f6" strokeWidth="3" strokeDasharray={`${progress} 100`} />
+          <div className="relative w-24 h-24">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="8" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="white" strokeWidth="8" 
+                strokeDasharray={`${progress * 2.64} 264`} strokeLinecap="round" className="progress-ring" />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">{progress}%</span>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl font-bold">{progress}%</span>
+            </div>
           </div>
         </div>
-        {completed === total && total > 0 && (
-          <div className="mt-4 p-3 bg-green-50 rounded-lg text-green-700 text-center">🎉 {t('allTaken')}</div>
-        )}
       </div>
 
-      {snoozeId && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">😴 {t('snoozed')}</div>}
-      {loading && <p className="text-gray-500 mb-4">{t('loading')}</p>}
+      {/* Snooze Toast */}
+      {snoozeId && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-2 z-50 animate-bounce">
+          <span className="text-xl">😴</span>
+          <span className="font-medium">{t('snoozed')}</span>
+        </div>
+      )}
 
+      {loading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Empty State */}
       {total === 0 && !loading && (
-        <Card className="mb-6">
-          <CardContent className="text-center py-8">
-            <span className="text-4xl mb-4 block">💊</span>
-            <p className="text-gray-600 mb-2">{t('noMedicationsToday')}</p>
-            <p className="text-sm text-gray-500">{t('addMedicationsHint')}</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-gray-100">
+          <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-4xl">💊</span>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('noMedicationsToday')}</h3>
+          <p className="text-gray-500 text-sm">{t('addMedicationsHint')}</p>
+        </div>
       )}
 
+      {/* Pending Reminders */}
       {pendingGroups.length > 0 && (
-        <>
-          <h2 className="text-lg font-semibold mb-4">{t('upcomingReminders')}</h2>
-          <p className="text-sm text-gray-500 mb-3">{t('tapToExpand')}</p>
-          <div className="mb-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+            {t('upcomingReminders')}
+          </h2>
+          <div className="space-y-3">
             {pendingGroups.map((group) => (
-              <TimeGroup key={group.time} group={group} expandedGroups={expandedGroups} toggleGroup={toggleGroup}
-                onTake={handleTake} onSkip={handleSkip} onSnooze={handleSnooze} isPending={true} t={t} />
+              <TimeGroupCard 
+                key={group.time} 
+                group={group} 
+                isExpanded={expandedGroups.has(group.time)}
+                onToggle={() => toggleGroup(group.time)}
+                onTake={handleTake}
+                onSkip={handleSkip}
+                onSnooze={handleSnooze}
+                isPending={true}
+                isZh={isZh}
+                t={t}
+              />
             ))}
           </div>
-        </>
+        </div>
       )}
 
+      {/* Completed Reminders */}
       {completedGroups.length > 0 && (
-        <>
-          <h2 className="text-lg font-semibold mb-4 text-green-700">✓ {t('completed')}</h2>
-          <div className="mb-6 opacity-75">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-emerald-700 mb-3 flex items-center gap-2">
+            <span className="text-emerald-500">✓</span>
+            {t('completed')}
+          </h2>
+          <div className="space-y-3 opacity-70">
             {completedGroups.map((group) => (
-              <TimeGroup key={group.time} group={group} expandedGroups={expandedGroups} toggleGroup={toggleGroup} isPending={false} t={t} />
+              <TimeGroupCard 
+                key={group.time} 
+                group={group} 
+                isExpanded={expandedGroups.has(group.time)}
+                onToggle={() => toggleGroup(group.time)}
+                isPending={false}
+                isZh={isZh}
+                t={t}
+              />
             ))}
           </div>
-        </>
+        </div>
       )}
 
+      {/* Reset Button */}
       {completed > 0 && (
-        <Card className="mt-6">
-          <CardContent className="text-center py-4">
-            <button onClick={handleReset} className="text-blue-600 hover:text-blue-800 text-sm underline">{t('resetReminders')}</button>
-          </CardContent>
-        </Card>
+        <div className="text-center pb-4">
+          <button onClick={handleReset} className="text-indigo-600 hover:text-indigo-800 text-sm font-medium underline underline-offset-2">
+            {t('resetReminders')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TimeGroupCard({ group, isExpanded, onToggle, onTake, onSkip, onSnooze, isPending, isZh, t }: {
+  group: ReminderGroup;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onTake?: (id: string) => void;
+  onSkip?: (id: string) => void;
+  onSnooze?: (id: string) => void;
+  isPending: boolean;
+  isZh: boolean;
+  t: (key: string) => string;
+}) {
+  const allCompleted = group.reminders.every(r => r.status === 'completed');
+  
+  return (
+    <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 ${isExpanded ? 'shadow-md' : ''}`}>
+      <button onClick={onToggle} className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${allCompleted ? 'bg-emerald-100' : 'bg-indigo-100'}`}>
+            <span className="text-2xl">{allCompleted ? '✅' : '⏰'}</span>
+          </div>
+          <div className="text-left">
+            <p className="font-bold text-gray-900 text-lg">{group.time}</p>
+            <p className="text-sm text-gray-500">
+              {group.reminders.length} {group.reminders.length > 1 ? t('medicationsPlural') : t('medication')}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex -space-x-2">
+            {group.reminders.slice(0, 3).map((r) => (
+              <div key={r.id} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm ${
+                r.status === 'completed' ? 'bg-emerald-500 text-white' : 'bg-indigo-500 text-white'
+              }`}>
+                {r.medicationName.charAt(0)}
+              </div>
+            ))}
+            {group.reminders.length > 3 && (
+              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold border-2 border-white">
+                +{group.reminders.length - 3}
+              </div>
+            )}
+          </div>
+          <svg className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+      
+      {isExpanded && (
+        <div className="border-t border-gray-100 px-4 py-3 space-y-3 bg-gray-50/50">
+          {group.reminders.map((reminder) => (
+            <MedicationItem 
+              key={reminder.id} 
+              reminder={reminder}
+              onTake={isPending && onTake ? () => onTake(reminder.id) : undefined}
+              onSkip={isPending && onSkip ? () => onSkip(reminder.id) : undefined}
+              onSnooze={isPending && onSnooze ? () => onSnooze(reminder.id) : undefined}
+              isZh={isZh}
+              t={t}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MedicationItem({ reminder, onTake, onSkip, onSnooze, isZh, t }: {
+  reminder: Reminder;
+  onTake?: () => void;
+  onSkip?: () => void;
+  onSnooze?: () => void;
+  isZh: boolean;
+  t: (key: string) => string;
+}) {
+  const isCompleted = reminder.status === 'completed';
+  
+  return (
+    <div className={`bg-white rounded-xl p-4 ${isCompleted ? 'opacity-60' : ''}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isCompleted ? 'bg-emerald-100' : 'bg-indigo-100'}`}>
+            <span className="text-xl">💊</span>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">{reminder.medicationName}</p>
+            <p className="text-sm text-gray-500">{reminder.dosage}</p>
+          </div>
+        </div>
+        {isCompleted && (
+          <span className="pill pill-success">✓ {isZh ? '已服用' : 'Taken'}</span>
+        )}
+      </div>
+      
+      {!isCompleted && onTake && (
+        <div className="flex gap-2">
+          <button onClick={onTake} className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors">
+            ✓ {t('takeDose')}
+          </button>
+          <button onClick={onSnooze} className="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-medium rounded-xl transition-colors">
+            😴
+          </button>
+          <button onClick={onSkip} className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium rounded-xl transition-colors">
+            {t('skip')}
+          </button>
+        </div>
       )}
     </div>
   );
