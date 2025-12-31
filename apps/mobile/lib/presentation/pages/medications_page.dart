@@ -333,6 +333,7 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
   int _amount = 1;
   String _unit = 'tablet'; // 'tablet' or 'ml'
   int _frequency = 1;
+  String _frequencyMode = '12h'; // '24h' = full day, '12h' = waking hours only
   TimeOfDay _firstDoseTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isLoading = false;
   int _durationDays = 0; // 0 = ongoing, 1-99 = fixed days
@@ -349,7 +350,12 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
   }
 
   List<String> get _scheduleTimes {
-    return MedicationModel.calculateScheduleTimes(_firstDoseTimeString, _frequency);
+    return MedicationModel.calculateScheduleTimes(_firstDoseTimeString, _frequency, mode: _frequencyMode);
+  }
+
+  int get _intervalHours {
+    final totalHours = _frequencyMode == '24h' ? 24 : 12;
+    return totalHours ~/ _frequency;
   }
 
   @override
@@ -518,6 +524,59 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
             ),
             const SizedBox(height: 12),
             
+            // Frequency mode selection (only show when frequency > 1)
+            if (_frequency > 1) ...[
+              Text('🌙 Frequency Mode', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.wb_sunny, size: 16),
+                          SizedBox(width: 4),
+                          Text('Waking (12h)'),
+                        ],
+                      ),
+                      selected: _frequencyMode == '12h',
+                      onSelected: (selected) {
+                        if (selected) setState(() => _frequencyMode = '12h');
+                      },
+                      selectedColor: Colors.green.shade100,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.nightlight_round, size: 16),
+                          SizedBox(width: 4),
+                          Text('Full Day (24h)'),
+                        ],
+                      ),
+                      selected: _frequencyMode == '24h',
+                      onSelected: (selected) {
+                        if (selected) setState(() => _frequencyMode = '24h');
+                      },
+                      selectedColor: Colors.purple.shade100,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _frequencyMode == '12h' 
+                    ? 'Spread doses over 12 waking hours (8AM-8PM)' 
+                    : 'Spread doses over full 24 hours including night',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 12),
+            ],
+            
             // Schedule preview
             if (_frequency > 0)
               Container(
@@ -544,7 +603,7 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          '(Every ${24 ~/ _frequency} hours)',
+                          '(Every $_intervalHours hours)',
                           style: TextStyle(color: Colors.blue.shade700, fontSize: 12),
                         ),
                       ),

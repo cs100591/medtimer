@@ -48,18 +48,26 @@ class MedicationModel {
   // Get duration display string
   String get durationDisplay => durationDays == 0 ? 'Ongoing' : '$durationDays days';
 
-  // Calculate schedule times based on frequency and first dose
-  static List<String> calculateScheduleTimes(String firstTime, int frequency) {
+  // Calculate schedule times based on frequency, first dose, and mode
+  // mode: '24h' = full day, '12h' = waking hours only (8AM-8PM)
+  static List<String> calculateScheduleTimes(String firstTime, int frequency, {String mode = '24h'}) {
     final times = <String>[_formatTime(firstTime)];
     if (frequency <= 1) return times;
     
     final parts = firstTime.split(':');
     final hours = int.parse(parts[0]);
     final minutes = int.parse(parts[1]);
-    final intervalHours = 24 ~/ frequency;
+    // 24h mode = spread over 24 hours, 12h mode = spread over 12 waking hours
+    final totalHours = mode == '24h' ? 24 : 12;
+    final intervalHours = totalHours ~/ frequency;
     
     for (var i = 1; i < frequency; i++) {
-      var newHours = (hours + (intervalHours * i)) % 24;
+      var newHours = hours + (intervalHours * i);
+      // For 12h mode, cap at reasonable evening time (8PM = 20:00)
+      if (mode == '12h' && newHours > 20) {
+        newHours = 20;
+      }
+      newHours = newHours % 24;
       final period = newHours >= 12 ? 'PM' : 'AM';
       final displayHours = newHours > 12 ? newHours - 12 : (newHours == 0 ? 12 : newHours);
       times.add('$displayHours:${minutes.toString().padLeft(2, '0')} $period');
