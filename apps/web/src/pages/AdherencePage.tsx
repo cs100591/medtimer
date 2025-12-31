@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AdherenceChart } from '../components/AdherenceChart';
 import type { AdherenceStats } from '../types';
+import { useTranslation } from '../i18n/TranslationContext';
 
 const sampleStats: AdherenceStats = {
   totalDoses: 50,
@@ -12,19 +13,19 @@ const sampleStats: AdherenceStats = {
 };
 
 export function AdherencePage() {
+  const { t } = useTranslation();
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('week');
 
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Adherence</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('adherence')}</h1>
         <div className="flex gap-2">
           <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg" title="Share">📤</button>
           <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg" title="Export">📥</button>
         </div>
       </div>
 
-      {/* Period Selector */}
       <div className="flex gap-2 mb-6">
         {(['week', 'month', 'year'] as const).map((p) => (
           <button
@@ -34,15 +35,14 @@ export function AdherencePage() {
               period === p ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
             }`}
           >
-            {p}
+            {t(p)}
           </button>
         ))}
       </div>
 
       <AdherenceChart stats={sampleStats} />
 
-      {/* By Medication */}
-      <h2 className="text-lg font-semibold mt-8 mb-4">By Medication</h2>
+      <h2 className="text-lg font-semibold mt-8 mb-4">{t('byMedication')}</h2>
       <div className="space-y-3">
         {[
           { name: 'Lisinopril', rate: 0.95 },

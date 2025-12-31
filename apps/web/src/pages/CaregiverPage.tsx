@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { useTranslation } from '../i18n/TranslationContext';
 
 interface CaregiverAccess {
   id: string;
@@ -11,26 +12,25 @@ interface CaregiverAccess {
   lastActivity?: string;
 }
 
-// Sample data
 const sampleAccess: CaregiverAccess[] = [
   { id: '1', patientName: 'John Smith', patientEmail: 'john@example.com', permissionLevel: 'manage', status: 'active', lastActivity: '2 hours ago' },
   { id: '2', patientName: 'Mary Johnson', patientEmail: 'mary@example.com', permissionLevel: 'view', status: 'active', lastActivity: '1 day ago' },
 ];
 
 export function CaregiverPage() {
+  const { t } = useTranslation();
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Caregiver Portal</h1>
-          <p className="text-gray-600">Monitor and support your loved ones</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('caregiverPortal')}</h1>
+          <p className="text-gray-600">{t('monitorSupport')}</p>
         </div>
-        <Button onClick={() => setShowInviteModal(true)}>+ Add Patient</Button>
+        <Button onClick={() => setShowInviteModal(true)}>{t('addPatient')}</Button>
       </div>
 
-      {/* Patient Cards */}
       <div className="space-y-4">
         {sampleAccess.map((access) => (
           <Card key={access.id} className="hover:shadow-lg transition-shadow">
@@ -46,53 +46,42 @@ export function CaregiverPage() {
               </div>
               <div className="text-right">
                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  access.permissionLevel === 'manage' 
-                    ? 'bg-purple-100 text-purple-700' 
-                    : 'bg-gray-100 text-gray-700'
+                  access.permissionLevel === 'manage' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
                 }`}>
-                  {access.permissionLevel === 'manage' ? '🔧 Co-manage' : '👁️ View only'}
+                  {access.permissionLevel === 'manage' ? `🔧 ${t('coManage')}` : `👁️ ${t('viewOnly')}`}
                 </span>
                 {access.lastActivity && (
-                  <p className="text-xs text-gray-400 mt-1">Active {access.lastActivity}</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('active')} {access.lastActivity}</p>
                 )}
               </div>
             </div>
             
-            {/* Quick Stats */}
             <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">92%</div>
-                <div className="text-xs text-gray-500">Adherence</div>
+                <div className="text-xs text-gray-500">{t('adherence')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">5</div>
-                <div className="text-xs text-gray-500">Medications</div>
+                <div className="text-xs text-gray-500">{t('medications')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-500">1</div>
-                <div className="text-xs text-gray-500">Missed Today</div>
+                <div className="text-xs text-gray-500">{t('missedToday')}</div>
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-2 mt-4">
-              <Button variant="secondary" size="sm" className="flex-1">
-                📊 View Report
-              </Button>
-              <Button variant="secondary" size="sm" className="flex-1">
-                💊 Medications
-              </Button>
-              <Button variant="ghost" size="sm">
-                ⚙️
-              </Button>
+              <Button variant="secondary" size="sm" className="flex-1">📊 {t('viewReport')}</Button>
+              <Button variant="secondary" size="sm" className="flex-1">💊 {t('medications')}</Button>
+              <Button variant="ghost" size="sm">⚙️</Button>
             </div>
           </Card>
         ))}
       </div>
 
-      {/* Peace of Mind Notifications */}
       <Card className="mt-6">
-        <CardTitle>🔔 Recent Notifications</CardTitle>
+        <CardTitle>🔔 {t('recentNotifications')}</CardTitle>
         <CardContent className="mt-4 space-y-3">
           <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
             <span className="text-green-500">✓</span>
@@ -108,47 +97,29 @@ export function CaregiverPage() {
               <p className="text-xs text-gray-500">Yesterday at 2:00 PM</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-            <span className="text-blue-500">📦</span>
-            <div className="flex-1">
-              <p className="text-sm font-medium">John's Lisinopril running low</p>
-              <p className="text-xs text-gray-500">5 days supply remaining</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
-      {/* Invite Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <Card className="w-full max-w-md">
-            <CardTitle>Invite Patient</CardTitle>
+            <CardTitle>{t('invitePatient')}</CardTitle>
             <CardContent className="mt-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Patient Email</label>
-                <input
-                  type="email"
-                  className="w-full border rounded-lg px-3 py-2"
-                  placeholder="patient@example.com"
-                />
+                <label className="block text-sm font-medium mb-1">{t('patientEmail')}</label>
+                <input type="email" className="w-full border rounded-lg px-3 py-2" placeholder="patient@example.com" />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Permission Level</label>
+                <label className="block text-sm font-medium mb-1">{t('permissionLevel')}</label>
                 <select className="w-full border rounded-lg px-3 py-2">
-                  <option value="view">View Only - See medications and adherence</option>
-                  <option value="manage">Co-manage - Edit medications and schedules</option>
+                  <option value="view">{t('viewOnlyDesc')}</option>
+                  <option value="manage">{t('coManageDesc')}</option>
                 </select>
               </div>
-              <p className="text-xs text-gray-500">
-                The patient will receive an invitation and must approve your access request.
-              </p>
+              <p className="text-xs text-gray-500">{t('inviteNote')}</p>
               <div className="flex gap-2 pt-2">
-                <Button variant="secondary" onClick={() => setShowInviteModal(false)} className="flex-1">
-                  Cancel
-                </Button>
-                <Button onClick={() => setShowInviteModal(false)} className="flex-1">
-                  Send Invitation
-                </Button>
+                <Button variant="secondary" onClick={() => setShowInviteModal(false)} className="flex-1">{t('cancel')}</Button>
+                <Button onClick={() => setShowInviteModal(false)} className="flex-1">{t('sendInvitation')}</Button>
               </div>
             </CardContent>
           </Card>

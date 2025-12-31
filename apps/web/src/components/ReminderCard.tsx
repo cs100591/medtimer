@@ -2,6 +2,7 @@ import React from 'react';
 import type { Reminder } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { useTranslation } from '../i18n/TranslationContext';
 
 interface ReminderCardProps {
   reminder: Reminder;
@@ -11,6 +12,7 @@ interface ReminderCardProps {
 }
 
 export function ReminderCard({ reminder, onTake, onSkip, onSnooze }: ReminderCardProps) {
+  const { t } = useTranslation();
   const isPending = reminder.status === 'pending';
 
   return (
@@ -37,17 +39,17 @@ export function ReminderCard({ reminder, onTake, onSkip, onSnooze }: ReminderCar
         <div className="flex gap-2 mt-4 pt-4 border-t">
           {onSnooze && (
             <Button variant="ghost" size="sm" onClick={onSnooze}>
-              😴 Snooze
+              😴 {t('snooze')}
             </Button>
           )}
           {onSkip && (
             <Button variant="secondary" size="sm" onClick={onSkip}>
-              ✕ Skip
+              ✕ {t('skip')}
             </Button>
           )}
           {onTake && (
             <Button size="sm" onClick={onTake} className="ml-auto">
-              ✓ Take
+              ✓ {t('takeDose')}
             </Button>
           )}
         </div>
