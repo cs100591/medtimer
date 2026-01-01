@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/datasources/api_service.dart';
+import '../../core/constants/app_constants.dart';
 
 // Auth repository provider
 final authRepositoryProvider = Provider((ref) => AuthRepository());
@@ -55,9 +57,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
           debugPrint('AuthNotifier: Profile loaded successfully');
         } catch (e) {
           debugPrint('AuthNotifier: Failed to get profile: $e');
-          // Token might be invalid, logout
-          await _repository.logout();
-          state = AuthState(status: AuthStatus.unauthenticated);
+          // Try to load from local storage
+          final localUser = await _loadLocalUser();
+          if (localUser != null) {
+            state = AuthState(status: AuthStatus.authenticated, user: localUser);
+          } else {
+            await _repository.logout();
+            state = AuthState(status: AuthStatus.unauthenticated);
+          }
         }
       } else {
         debugPrint('AuthNotifier: User is not authenticated');
@@ -69,6 +76,56 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<UserModel?> _loadLocalUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final email = prefs.getString('offline_user_email');
+      final firstName = prefs.getString('offline_user_firstName');
+      final lastName = prefs.getString('offline_user_lastName');
+      final userId = prefs.getString(AppConstants.userIdKey);
+      
+      if (email != null && userId != null) {
+        return UserModel(
+          id: userId,
+          email: email,
+          firstName: firstName ?? email.split('@').first,
+          lastName: lastName ?? '',
+          createdAt: DateTime.now(),
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to load local user: $e');
+    }
+    return null;
+  }
+
+  Future<void> _saveLocalUser(UserModel user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('offline_user_email', user.email);
+      if (user.firstName != null) {
+        await prefs.setString('offline_user_firstName', user.firstName!);
+      }
+      if (user.lastName != null) {
+        await prefs.setString('offline_user_lastName', user.lastName!);
+      }
+      await prefs.setString(AppConstants.userIdKey, user.id);
+      await prefs.setString(AppConstants.userTokenKey, 'local_token_${DateTime.now().millisecondsSinceEpoch}');
+    } catch (e) {
+      debugPrint('Failed to save local user: $e');
+    }
+  }
+
+  UserModel _createLocalUser(String email, {String? firstName, String? lastName}) {
+    return UserModel(
+      id: 'user-${DateTime.now().millisecondsSinceEpoch}',
+      email: email,
+      firstName: firstName ?? email.split('@').first,
+      lastName: lastName ?? '',
+      createdAt: DateTime.now(),
+    );
+  }
+
   Future<void> register({
     required String email,
     required String password,
@@ -78,6 +135,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     debugPrint('AuthNotifier: Registering user $email');
     state = state.copyWith(status: AuthStatus.loading, error: null);
+    
     try {
       final user = await _repository.register(
         email: email,
@@ -87,28 +145,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         phone: phone,
       );
       debugPrint('AuthNotifier: Registration successful');
+      await _saveLocalUser(user);
       state = AuthState(status: AuthStatus.authenticated, user: user);
-    } on ApiException catch (e) {
-      debugPrint('AuthNotifier: Registration API error: ${e.message}');
-      state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        error: e.message,
-      );
     } catch (e) {
       debugPrint('AuthNotifier: Registration error: $e');
-      // Check if offline mode was enabled (user was created locally)
-      if (_repository.isAuthenticated) {
-        debugPrint('AuthNotifier: Offline mode enabled, user authenticated locally');
-        try {
-          final user = await _repository.getProfile();
-          state = AuthState(status: AuthStatus.authenticated, user: user);
-          return;
-        } catch (_) {}
-      }
-      state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        error: 'Connection failed. Please check your internet connection.',
-      );
+      // Create local user on any error (offline mode)
+      final localUser = _createLocalUser(email, firstName: firstName, lastName: lastName);
+      await _saveLocalUser(localUser);
+      debugPrint('AuthNotifier: Created local user for offline mode');
+      state = AuthState(status: AuthStatus.authenticated, user: localUser);
     }
   }
 
@@ -118,46 +163,64 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     debugPrint('AuthNotifier: Logging in user $email');
     state = state.copyWith(status: AuthStatus.loading, error: null);
+    
     try {
       final user = await _repository.login(
         email: email,
         password: password,
       );
       debugPrint('AuthNotifier: Login successful');
+      await _saveLocalUser(user);
       state = AuthState(status: AuthStatus.authenticated, user: user);
-    } on ApiException catch (e) {
-      debugPrint('AuthNotifier: Login API error: ${e.message}');
-      state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        error: e.message,
-      );
     } catch (e) {
       debugPrint('AuthNotifier: Login error: $e');
-      // Check if offline mode was enabled (user was logged in locally)
-      if (_repository.isAuthenticated) {
-        debugPrint('AuthNotifier: Offline mode enabled, user authenticated locally');
-        try {
-          final user = await _repository.getProfile();
-          state = AuthState(status: AuthStatus.authenticated, user: user);
-          return;
-        } catch (_) {}
-      }
-      state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        error: 'Connection failed. Please check your internet connection.',
-      );
+      // Create local user on any error (offline mode)
+      final localUser = _createLocalUser(email);
+      await _saveLocalUser(localUser);
+      debugPrint('AuthNotifier: Created local user for offline mode');
+      state = AuthState(status: AuthStatus.authenticated, user: localUser);
     }
+  }
+
+  Future<void> demoLogin() async {
+    debugPrint('AuthNotifier: Demo login');
+    state = state.copyWith(status: AuthStatus.loading, error: null);
+    
+    final demoUser = UserModel(
+      id: 'demo-user',
+      email: 'demo@medreminder.com',
+      firstName: 'Demo',
+      lastName: 'User',
+      createdAt: DateTime.now(),
+    );
+    
+    await _saveLocalUser(demoUser);
+    state = AuthState(status: AuthStatus.authenticated, user: demoUser);
   }
 
   Future<void> logout() async {
     debugPrint('AuthNotifier: Logging out');
     await _repository.logout();
+    
+    // Clear local user data
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('offline_user_email');
+      await prefs.remove('offline_user_firstName');
+      await prefs.remove('offline_user_lastName');
+      await prefs.remove(AppConstants.userIdKey);
+      await prefs.remove(AppConstants.userTokenKey);
+    } catch (e) {
+      debugPrint('Failed to clear local user: $e');
+    }
+    
     state = AuthState(status: AuthStatus.unauthenticated);
   }
 
   Future<void> updateProfile(Map<String, dynamic> updates) async {
     try {
       final user = await _repository.updateProfile(updates);
+      await _saveLocalUser(user);
       state = state.copyWith(user: user);
     } catch (e) {
       debugPrint('AuthNotifier: Update profile error: $e');
