@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../../data/models/medication_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/medication_provider.dart';
-import '../widgets/reminder_card.dart';
 import 'medications_page.dart';
 import 'adherence_page.dart';
 import 'settings_page.dart';
@@ -35,25 +36,27 @@ class _HomePageState extends ConsumerState<HomePage> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        backgroundColor: Colors.white,
+        indicatorColor: const Color(0xFF007AFF).withOpacity(0.1),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.today_outlined),
-            selectedIcon: Icon(Icons.today),
+            selectedIcon: Icon(Icons.today, color: Color(0xFF007AFF)),
             label: 'Today',
           ),
           NavigationDestination(
             icon: Icon(Icons.medication_outlined),
-            selectedIcon: Icon(Icons.medication),
+            selectedIcon: Icon(Icons.medication, color: Color(0xFF007AFF)),
             label: 'Medications',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
+            selectedIcon: Icon(Icons.bar_chart, color: Color(0xFF007AFF)),
             label: 'Adherence',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
+            selectedIcon: Icon(Icons.settings, color: Color(0xFF007AFF)),
             label: 'Settings',
           ),
         ],
@@ -71,6 +74,29 @@ class _TodayTab extends ConsumerStatefulWidget {
 
 class _TodayTabState extends ConsumerState<_TodayTab> {
   final Set<String> _expandedGroups = {};
+  Map<String, String> _reminderStatuses = {}; // id -> 'pending' | 'completed' | 'missed'
+  String? _snoozeId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReminderStatuses();
+  }
+
+  Future<void> _loadReminderStatuses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final statusesJson = prefs.getString('reminder_statuses');
+    if (statusesJson != null) {
+      setState(() {
+        _reminderStatuses = Map<String, String>.from(jsonDecode(statusesJson));
+      });
+    }
+  }
+
+  Future<void> _saveReminderStatuses() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('reminder_statuses', jsonEncode(_reminderStatuses));
+  }
 
   void _toggleGroup(String time) {
     setState(() {
@@ -82,440 +108,526 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
     });
   }
 
+  void _handleTake(String id, String medicationName) {
+    setState(() {
+      _reminderStatuses[id] = 'completed';
+    });
+    _saveReminderStatuses();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✓ $medicationName marked as taken'),
+        backgroundColor: const Color(0xFF32D74B),
+      ),
+    );
+  }
+
+  void _handleSkip(String id, String medicationName) {
+    setState(() {
+      _reminderStatuses[id] = 'missed';
+    });
+    _saveReminderStatuses();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$medicationName skipped')),
+    );
+  }
+
+  void _handleSnooze(String id, String medicationName) {
+    setState(() => _snoozeId = id);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _snoozeId = null);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('😴 Snoozed for 15 minutes'),
+        backgroundColor: Color(0xFFFF9500),
+      ),
+    );
+  }
+
+  void _resetReminders() {
+    setState(() {
+      _reminderStatuses.clear();
+    });
+    _saveReminderStatuses();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final now = DateTime.now();
     final userId = ref.watch(currentUserIdProvider);
     final user = ref.watch(currentUserProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hello, ${user?.fullName ?? 'there'}!',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            Text(
-              _formatDate(now),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () => _openBarcodeScanner(context),
-            tooltip: 'Scan medication',
-          ),
-          IconButton(
-            icon: const Icon(Icons.emergency),
-            onPressed: () => _openEmergencyScreen(context),
-            tooltip: 'Emergency',
-          ),
-        ],
-      ),
-      body: userId == null
-          ? const Center(child: CircularProgressIndicator())
-          : _buildBody(context, userId),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'today_fab',
-        onPressed: () => _quickLogMedication(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Quick Log'),
+      backgroundColor: const Color(0xFFF2F2F7),
+      body: SafeArea(
+        child: userId == null
+            ? const Center(child: CircularProgressIndicator())
+            : _buildBody(context, userId, user?.fullName ?? 'there', now),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, String userId) {
+  Widget _buildBody(BuildContext context, String userId, String userName, DateTime now) {
     final medicationsAsync = ref.watch(medicationsProvider(userId));
 
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(medicationsProvider(userId));
+        await _loadReminderStatuses();
       },
       child: medicationsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Error: $error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(medicationsProvider(userId)),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-        data: (medications) {
-          // Generate today's reminders from medications
-          final reminders = <Map<String, dynamic>>[];
-          for (final med in medications) {
-            for (final time in med.scheduleTimes) {
-              reminders.add({
-                'medication': med,
-                'time': time,
-                'id': '${med.id}-${med.scheduleTimes.indexOf(time)}',
-              });
-            }
-          }
-          
-          // Group reminders by time
-          final groupedReminders = <String, List<Map<String, dynamic>>>{};
-          for (final reminder in reminders) {
-            final time = reminder['time'] as String;
-            groupedReminders.putIfAbsent(time, () => []);
-            groupedReminders[time]!.add(reminder);
-          }
-          
-          // Sort groups by time
-          final sortedTimes = groupedReminders.keys.toList()
-            ..sort((a, b) => _parseTime(a).compareTo(_parseTime(b)));
-          
-          return ListView(
-            children: [
-              _buildAdherenceSummary(context, reminders.length),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Today's Reminders",
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (sortedTimes.isNotEmpty)
-                      Text(
-                        'Tap a time slot to expand',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (reminders.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Column(
-                    children: [
-                      Icon(Icons.medication_outlined, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'No medications scheduled',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Add medications to see reminders here',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                ...sortedTimes.map((time) {
-                  final groupReminders = groupedReminders[time]!;
-                  final isExpanded = _expandedGroups.contains(time);
-                  final hasCritical = groupReminders.any((r) => (r['medication'] as MedicationModel).isCritical);
-                  
-                  return _TimeGroupCard(
-                    time: time,
-                    reminders: groupReminders,
-                    isExpanded: isExpanded,
-                    hasCritical: hasCritical,
-                    onToggle: () => _toggleGroup(time),
-                    onTake: (name) => _handleTake(context, name),
-                    onSkip: (name) => _handleSkip(context, name),
-                    onSnooze: (name) => _handleSnooze(context, name),
-                  );
-                }),
-              const SizedBox(height: 80),
-            ],
-          );
-        },
+        error: (error, stack) => _buildErrorState(context, userId, error),
+        data: (medications) => _buildContent(context, medications, userName, now),
       ),
     );
   }
 
-  int _parseTime(String timeStr) {
-    final match = RegExp(r'(\d+):(\d+)\s*(AM|PM)?', caseSensitive: false).firstMatch(timeStr);
-    if (match == null) return 0;
-    
-    var hours = int.parse(match.group(1)!);
-    final minutes = int.parse(match.group(2)!);
-    final period = match.group(3)?.toUpperCase();
-    
-    if (period == 'PM' && hours != 12) hours += 12;
-    if (period == 'AM' && hours == 12) hours = 0;
-    
-    return hours * 60 + minutes;
-  }
-
-  Widget _buildAdherenceSummary(BuildContext context, int totalMeds) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Today's Progress",
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$totalMeds medications',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              width: 60,
-              height: 60,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CircularProgressIndicator(
-                    value: totalMeds > 0 ? 0.0 : 1.0,
-                    strokeWidth: 6,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  ),
-                  Center(
-                    child: Text(
-                      '0%',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
-  }
-
-  void _handleTake(BuildContext context, String medication) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$medication marked as taken')),
-    );
-  }
-
-  void _handleSkip(BuildContext context, String medication) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Skip Medication'),
-        content: TextField(
-          decoration: const InputDecoration(
-            labelText: 'Reason (optional)',
-            hintText: 'Why are you skipping this dose?',
-          ),
-          maxLines: 2,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+  Widget _buildErrorState(BuildContext context, String userId, Object error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text('Error: $error'),
+          const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$medication skipped')),
-              );
-            },
-            child: const Text('Skip'),
+            onPressed: () => ref.invalidate(medicationsProvider(userId)),
+            child: const Text('Retry'),
           ),
         ],
       ),
     );
   }
 
-  void _handleSnooze(BuildContext context, String medication) {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.snooze),
-              title: const Text('Snooze for 10 minutes'),
-              onTap: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$medication snoozed for 10 minutes')),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.snooze),
-              title: const Text('Snooze for 30 minutes'),
-              onTap: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$medication snoozed for 30 minutes')),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.snooze),
-              title: const Text('Snooze for 1 hour'),
-              onTap: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$medication snoozed for 1 hour')),
-                );
-              },
-            ),
-          ],
+  Widget _buildContent(BuildContext context, List<MedicationModel> medications, String userName, DateTime now) {
+    // Generate reminders from medications
+    final reminders = <Map<String, dynamic>>[];
+    for (final med in medications) {
+      if (!med.isActive) continue;
+      for (var i = 0; i < med.scheduleTimes.length; i++) {
+        final id = '${med.id}-$i';
+        reminders.add({
+          'id': id,
+          'medication': med,
+          'time': med.scheduleTimes[i],
+          'status': _reminderStatuses[id] ?? 'pending',
+        });
+      }
+    }
+
+    // Group by time
+    final groupedReminders = <String, List<Map<String, dynamic>>>{};
+    for (final reminder in reminders) {
+      final time = reminder['time'] as String;
+      groupedReminders.putIfAbsent(time, () => []);
+      groupedReminders[time]!.add(reminder);
+    }
+
+    // Sort groups by time
+    final sortedTimes = groupedReminders.keys.toList()
+      ..sort((a, b) => _parseTime(a).compareTo(_parseTime(b)));
+
+    // Calculate progress
+    final total = reminders.length;
+    final completed = reminders.where((r) => r['status'] == 'completed').length;
+    final progress = total > 0 ? (completed / total * 100).round() : 0;
+
+    // Separate pending and completed
+    final pendingGroups = <String, List<Map<String, dynamic>>>{};
+    final completedGroups = <String, List<Map<String, dynamic>>>{};
+    
+    for (final time in sortedTimes) {
+      final pending = groupedReminders[time]!.where((r) => r['status'] == 'pending').toList();
+      final done = groupedReminders[time]!.where((r) => r['status'] == 'completed').toList();
+      if (pending.isNotEmpty) pendingGroups[time] = pending;
+      if (done.isNotEmpty) completedGroups[time] = done;
+    }
+
+    final dateStr = _formatDate(now);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Header
+        Text(
+          dateStr,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF007AFF),
+          ),
         ),
+        const SizedBox(height: 4),
+        const Text(
+          "Today's Reminders",
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1C1C1E),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Progress Card
+        _buildProgressCard(completed, total, progress),
+        const SizedBox(height: 20),
+
+        // Snooze Toast
+        if (_snoozeId != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF9500),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('😴', style: TextStyle(fontSize: 20)),
+                SizedBox(width: 8),
+                Text('Snoozed', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+
+        // Empty State
+        if (total == 0)
+          _buildEmptyState(),
+
+        // Pending Reminders
+        if (pendingGroups.isNotEmpty) ...[
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF007AFF),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Upcoming',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1C1C1E),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...pendingGroups.entries.map((entry) => _buildTimeGroupCard(
+            entry.key,
+            entry.value,
+            isPending: true,
+          )),
+          const SizedBox(height: 20),
+        ],
+
+        // Completed Reminders
+        if (completedGroups.isNotEmpty) ...[
+          const Row(
+            children: [
+              Text('✓', style: TextStyle(color: Color(0xFF32D74B), fontSize: 16)),
+              SizedBox(width: 8),
+              Text(
+                'Completed',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF32D74B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Opacity(
+            opacity: 0.7,
+            child: Column(
+              children: completedGroups.entries.map((entry) => _buildTimeGroupCard(
+                entry.key,
+                entry.value,
+                isPending: false,
+              )).toList(),
+            ),
+          ),
+        ],
+
+        // Reset Button
+        if (completed > 0) ...[
+          const SizedBox(height: 20),
+          Center(
+            child: TextButton(
+              onPressed: _resetReminders,
+              child: const Text(
+                'Reset Reminders',
+                style: TextStyle(color: Color(0xFF8E8E93)),
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  Widget _buildProgressCard(int completed, int total, int progress) {
+    final progressColor = progress >= 80
+        ? const Color(0xFF32D74B)
+        : progress >= 50
+            ? const Color(0xFFFF9500)
+            : const Color(0xFF007AFF);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Today's Progress",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF8E8E93),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'SF Pro Display',
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '$completed',
+                        style: const TextStyle(color: Color(0xFF1C1C1E)),
+                      ),
+                      TextSpan(
+                        text: '/$total',
+                        style: const TextStyle(color: Color(0xFFAEAEB2)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'doses taken',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF8E8E93),
+                  ),
+                ),
+                if (completed == total && total > 0) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF32D74B).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('🎉', style: TextStyle(fontSize: 14)),
+                        SizedBox(width: 4),
+                        Text(
+                          'All done!',
+                          style: TextStyle(
+                            color: Color(0xFF32D74B),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 96,
+            height: 96,
+            child: Stack(
+              children: [
+                SizedBox.expand(
+                  child: CircularProgressIndicator(
+                    value: progress / 100,
+                    strokeWidth: 8,
+                    backgroundColor: const Color(0xFFE5E5EA),
+                    valueColor: AlwaysStoppedAnimation(progressColor),
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    '$progress%',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: progressColor,
+                      fontFamily: 'SF Pro Display',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _openBarcodeScanner(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const BarcodeScannerPage()),
-    );
-  }
-
-  void _openEmergencyScreen(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const EmergencyPage()),
-    );
-  }
-
-  void _quickLogMedication(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Quick log feature')),
-    );
-  }
-}
-
-// Time Group Card Widget - Expandable group of medications at same time
-class _TimeGroupCard extends StatelessWidget {
-  final String time;
-  final List<Map<String, dynamic>> reminders;
-  final bool isExpanded;
-  final bool hasCritical;
-  final VoidCallback onToggle;
-  final void Function(String) onTake;
-  final void Function(String) onSkip;
-  final void Function(String) onSnooze;
-
-  const _TimeGroupCard({
-    required this.time,
-    required this.reminders,
-    required this.isExpanded,
-    required this.hasCritical,
-    required this.onToggle,
-    required this.onTake,
-    required this.onSkip,
-    required this.onSnooze,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: hasCritical 
-            ? const BorderSide(color: Colors.red, width: 2)
-            : BorderSide.none,
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
-          // Header - always visible, tappable
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFF007AFF).withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Text('💊', style: TextStyle(fontSize: 40)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No medications today',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1C1C1E),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Add medications to see reminders here',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF8E8E93),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeGroupCard(String time, List<Map<String, dynamic>> reminders, {required bool isPending}) {
+    final isExpanded = _expandedGroups.contains(time);
+    final allCompleted = reminders.every((r) => r['status'] == 'completed');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: isExpanded
+            ? [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))]
+            : null,
+      ),
+      child: Column(
+        children: [
+          // Header
           InkWell(
-            onTap: onToggle,
+            onTap: () => _toggleGroup(time),
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // Time icon
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      shape: BoxShape.circle,
+                      color: allCompleted
+                          ? const Color(0xFF32D74B).withOpacity(0.12)
+                          : const Color(0xFF007AFF).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.access_time, color: Colors.blue),
+                    child: Center(
+                      child: Text(
+                        allCompleted ? '✅' : '⏰',
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  // Time and count
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           time,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1C1C1E),
+                            fontFamily: 'SF Pro Display',
                           ),
                         ),
                         Text(
                           '${reminders.length} medication${reminders.length > 1 ? 's' : ''}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF8E8E93),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // Medication avatars preview
+                  // Avatars
                   Row(
                     children: [
                       ...reminders.take(3).map((r) {
                         final med = r['medication'] as MedicationModel;
+                        final status = r['status'] as String;
                         return Container(
                           width: 32,
                           height: 32,
                           margin: const EdgeInsets.only(right: 4),
                           decoration: BoxDecoration(
-                            color: med.isCritical ? Colors.red.shade100 : Colors.blue.shade100,
+                            color: status == 'completed'
+                                ? const Color(0xFF32D74B)
+                                : const Color(0xFF007AFF),
                             shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
                           ),
                           child: Center(
                             child: Text(
                               med.name.substring(0, 1).toUpperCase(),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: med.isCritical ? Colors.red : Colors.blue,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -526,15 +638,16 @@ class _TimeGroupCard extends StatelessWidget {
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
+                            color: const Color(0xFFF2F2F7),
                             shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
                           ),
                           child: Center(
                             child: Text(
                               '+${reminders.length - 3}',
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
                               ),
                             ),
                           ),
@@ -542,10 +655,9 @@ class _TimeGroupCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(width: 8),
-                  // Expand icon
                   Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.grey,
+                    color: const Color(0xFFAEAEB2),
                   ),
                 ],
               ),
@@ -555,21 +667,10 @@ class _TimeGroupCard extends StatelessWidget {
           if (isExpanded) ...[
             const Divider(height: 1),
             Container(
-              color: Colors.grey.shade50,
+              color: const Color(0xFFF2F2F7),
+              padding: const EdgeInsets.all(12),
               child: Column(
-                children: reminders.map((reminder) {
-                  final med = reminder['medication'] as MedicationModel;
-                  return ReminderCard(
-                    medicationName: med.name,
-                    dosage: med.dosage,
-                    time: time,
-                    isPending: true,
-                    isCritical: med.isCritical,
-                    onTake: () => onTake(med.name),
-                    onSkip: () => onSkip(med.name),
-                    onSnooze: () => onSnooze(med.name),
-                  );
-                }).toList(),
+                children: reminders.map((r) => _buildMedicationItem(r, isPending)).toList(),
               ),
             ),
           ],
@@ -577,75 +678,141 @@ class _TimeGroupCard extends StatelessWidget {
       ),
     );
   }
-}
 
-// Placeholder pages
-class BarcodeScannerPage extends StatelessWidget {
-  const BarcodeScannerPage({super.key});
+  Widget _buildMedicationItem(Map<String, dynamic> reminder, bool isPending) {
+    final med = reminder['medication'] as MedicationModel;
+    final id = reminder['id'] as String;
+    final status = reminder['status'] as String;
+    final isCompleted = status == 'completed';
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Scan Medication')),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.qr_code_scanner, size: 100, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('Point camera at medication barcode'),
-          ],
-        ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
       ),
-    );
-  }
-}
-
-class EmergencyPage extends StatelessWidget {
-  const EmergencyPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Emergency'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      child: Column(
         children: [
-          Card(
-            color: Colors.red.shade50,
-            child: const Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Icon(Icons.emergency, size: 48, color: Colors.red),
-                  SizedBox(height: 8),
-                  Text(
-                    'Emergency Contacts',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isCompleted
+                      ? const Color(0xFF32D74B).withOpacity(0.12)
+                      : const Color(0xFF007AFF).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(
+                  child: Text('💊', style: TextStyle(fontSize: 20)),
+                ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      med.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1C1C1E),
+                      ),
+                    ),
+                    Text(
+                      med.dosage,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isCompleted)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF32D74B).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    '✓ Taken',
+                    style: TextStyle(
+                      color: Color(0xFF32D74B),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (!isCompleted && isPending) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _handleTake(id, med.name),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF32D74B),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text('✓ Take Dose', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9500).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    onPressed: () => _handleSnooze(id, med.name),
+                    icon: const Text('😴', style: TextStyle(fontSize: 18)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () => _handleSkip(id, med.name),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    side: const BorderSide(color: Color(0xFFE5E5EA)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Skip', style: TextStyle(color: Color(0xFF8E8E93))),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Critical Medications',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Card(
-            child: ListTile(
-              leading: Icon(Icons.medication, color: Colors.red),
-              title: Text('Aspirin 81mg'),
-              subtitle: Text('Take immediately if chest pain'),
-            ),
-          ),
+          ],
         ],
       ),
     );
+  }
+
+  int _parseTime(String timeStr) {
+    final match = RegExp(r'(\d+):(\d+)\s*(AM|PM)?', caseSensitive: false).firstMatch(timeStr);
+    if (match == null) return 0;
+    var hours = int.parse(match.group(1)!);
+    final minutes = int.parse(match.group(2)!);
+    final period = match.group(3)?.toUpperCase();
+    if (period == 'PM' && hours != 12) hours += 12;
+    if (period == 'AM' && hours == 12) hours = 0;
+    return hours * 60 + minutes;
+  }
+
+  String _formatDate(DateTime date) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'data/datasources/api_service.dart';
+import 'services/notification_service.dart';
 import 'presentation/pages/home_page.dart';
 import 'presentation/pages/login_page.dart';
 import 'presentation/providers/auth_provider.dart';
@@ -12,6 +13,9 @@ void main() async {
   
   // Initialize API service
   await ApiService().init();
+  
+  // Initialize notification service
+  await NotificationService().init();
   
   runApp(
     const ProviderScope(
