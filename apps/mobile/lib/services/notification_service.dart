@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -15,7 +16,19 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
 
-    tz.initializeTimeZones();
+    // Initialize timezone database
+    tz_data.initializeTimeZones();
+    
+    // Get device timezone using flutter_timezone
+    try {
+      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      debugPrint('NotificationService: Timezone set to $timeZoneName');
+    } catch (e) {
+      // Fallback to UTC if timezone detection fails
+      debugPrint('NotificationService: Failed to get timezone, using UTC: $e');
+      tz.setLocalLocation(tz.UTC);
+    }
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
@@ -38,7 +51,7 @@ class NotificationService {
     await _requestPermissions();
 
     _initialized = true;
-    debugPrint('NotificationService initialized');
+    debugPrint('NotificationService initialized successfully');
   }
 
   Future<void> _requestPermissions() async {
@@ -175,10 +188,12 @@ class NotificationService {
       time.minute,
     );
     
+    // If the time has already passed today, schedule for tomorrow
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
     
+    debugPrint('NotificationService: Scheduling for ${scheduledDate.toString()} (now: ${now.toString()})');
     return scheduledDate;
   }
 
