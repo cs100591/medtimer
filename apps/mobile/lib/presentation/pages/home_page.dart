@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/medication_provider.dart';
 import 'medications_page.dart';
 import 'adherence_page.dart';
+import 'caregiver_page.dart';
 import 'settings_page.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -25,6 +26,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       const _TodayTab(),
       const MedicationsPage(),
       const AdherencePage(),
+      const CaregiverPage(),
       const SettingsPage(),
     ];
 
@@ -47,12 +49,17 @@ class _HomePageState extends ConsumerState<HomePage> {
           NavigationDestination(
             icon: Icon(Icons.medication_outlined),
             selectedIcon: Icon(Icons.medication, color: Color(0xFF007AFF)),
-            label: 'Medications',
+            label: 'Meds',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart, color: Color(0xFF007AFF)),
             label: 'Adherence',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people, color: Color(0xFF007AFF)),
+            label: 'Caregiver',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
