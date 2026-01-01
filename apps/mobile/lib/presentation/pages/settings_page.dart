@@ -16,16 +16,23 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _notificationsEnabled = true;
   bool _saved = false;
+  int _scheduledNotificationsCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadNotificationSetting();
+    _loadScheduledNotificationsCount();
   }
 
   Future<void> _loadNotificationSetting() async {
     final enabled = await NotificationService().areNotificationsEnabled();
     setState(() => _notificationsEnabled = enabled);
+  }
+
+  Future<void> _loadScheduledNotificationsCount() async {
+    final pending = await NotificationService().getPendingNotifications();
+    setState(() => _scheduledNotificationsCount = pending.length);
   }
 
   void _showSaved() {
@@ -142,13 +149,56 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 onChanged: (value) async {
                   await NotificationService().setNotificationsEnabled(value);
                   setState(() => _notificationsEnabled = value);
+                  await _loadScheduledNotificationsCount();
                   _showSaved();
                 },
               ),
               const Divider(height: 1),
               _buildListItem(
+                title: 'Scheduled Reminders',
+                subtitle: '$_scheduledNotificationsCount notifications scheduled',
+                trailing: TextButton(
+                  onPressed: () async {
+                    await _loadScheduledNotificationsCount();
+                    if (mounted) {
+                      final pending = await NotificationService().getPendingNotifications();
+                      if (mounted) {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Scheduled Notifications'),
+                            content: SizedBox(
+                              width: double.maxFinite,
+                              height: 300,
+                              child: pending.isEmpty
+                                  ? const Center(child: Text('No notifications scheduled'))
+                                  : ListView.builder(
+                                      itemCount: pending.length,
+                                      itemBuilder: (_, i) => ListTile(
+                                        leading: const Icon(Icons.notifications),
+                                        title: Text(pending[i].title ?? 'Reminder'),
+                                        subtitle: Text(pending[i].body ?? ''),
+                                      ),
+                                    ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Close'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('View'),
+                ),
+              ),
+              const Divider(height: 1),
+              _buildListItem(
                 title: 'Test Notification',
-                subtitle: 'Send a test notification',
+                subtitle: 'Send a test notification now',
                 trailing: TextButton(
                   onPressed: () async {
                     await NotificationService().showTestNotification();

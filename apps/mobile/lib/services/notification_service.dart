@@ -45,7 +45,13 @@ class NotificationService {
     final android = _notifications.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
-      await android.requestNotificationsPermission();
+      // Request notification permission
+      final granted = await android.requestNotificationsPermission();
+      debugPrint('NotificationService: Notification permission granted: $granted');
+      
+      // Request exact alarm permission for scheduled notifications
+      final exactAlarmGranted = await android.requestExactAlarmsPermission();
+      debugPrint('NotificationService: Exact alarm permission granted: $exactAlarmGranted');
     }
   }
 
@@ -84,7 +90,6 @@ class NotificationService {
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
-      sound: const RawResourceAndroidNotificationSound('notification'),
       enableVibration: true,
       playSound: true,
     );
@@ -225,6 +230,9 @@ class NotificationService {
     required String dosage,
     required List<String> scheduleTimes,
   }) async {
+    debugPrint('NotificationService: Scheduling reminders for $medicationName');
+    debugPrint('NotificationService: Schedule times: $scheduleTimes');
+    
     // Cancel existing notifications for this medication
     final baseId = medicationId.hashCode.abs();
     for (var i = 0; i < 10; i++) {
@@ -233,6 +241,7 @@ class NotificationService {
 
     // Schedule new notifications
     for (var i = 0; i < scheduleTimes.length; i++) {
+      debugPrint('NotificationService: Scheduling notification ${baseId + i} for ${scheduleTimes[i]}');
       await scheduleMedicationReminder(
         id: baseId + i,
         medicationName: medicationName,
@@ -241,6 +250,8 @@ class NotificationService {
         daily: true,
       );
     }
+    
+    debugPrint('NotificationService: Scheduled ${scheduleTimes.length} notifications for $medicationName');
   }
 
   // Get notification settings
@@ -257,5 +268,44 @@ class NotificationService {
     if (!enabled) {
       await cancelAllNotifications();
     }
+  }
+
+  // Get list of pending notifications (for debugging)
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    return await _notifications.pendingNotificationRequests();
+  }
+
+  // Show immediate medication reminder (for testing a specific medication)
+  Future<void> showImmediateMedicationReminder({
+    required String medicationName,
+    required String dosage,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'medication_reminders',
+      'Medication Reminders',
+      channelDescription: 'Reminders to take your medications',
+      importance: Importance.high,
+      priority: Priority.high,
+      enableVibration: true,
+      playSound: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      '💊 Time for $medicationName',
+      'Take $dosage',
+      details,
+    );
   }
 }
