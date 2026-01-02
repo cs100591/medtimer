@@ -44,8 +44,15 @@ function AppRoutes() {
       const user = {
         id: userId,
         email: 'guest@medcare.local',
-        firstName: 'Guest',
-        lastName: 'User',
+        name: 'Guest User',
+        language: 'en',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        preferences: {
+          voiceEnabled: false,
+          highContrast: false,
+          fontSize: 'normal' as const,
+          notificationsEnabled: true,
+        },
         createdAt: new Date().toISOString(),
       };
       localStorage.setItem('user_id', userId);
@@ -63,8 +70,15 @@ function AppRoutes() {
     const user = {
       id: userId,
       email: 'guest@medcare.local',
-      firstName: 'Guest',
-      lastName: 'User',
+      name: 'Guest User',
+      language: 'en',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      preferences: {
+        voiceEnabled: false,
+        highContrast: false,
+        fontSize: 'normal' as const,
+        notificationsEnabled: true,
+      },
       createdAt: new Date().toISOString(),
     };
     dispatch(setUser(user));

@@ -40,8 +40,15 @@ export function LoginPrompt({ title, description }: LoginPromptProps) {
       const user = {
         id: `user-${Date.now()}`,
         email,
-        firstName: firstName || email.split('@')[0],
-        lastName: lastName || '',
+        name: firstName ? `${firstName} ${lastName || ''}`.trim() : email.split('@')[0],
+        language: 'en',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        preferences: {
+          voiceEnabled: false,
+          highContrast: false,
+          fontSize: 'normal' as const,
+          notificationsEnabled: true,
+        },
         createdAt: new Date().toISOString(),
       };
       
