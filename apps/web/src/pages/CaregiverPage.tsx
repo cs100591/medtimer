@@ -40,7 +40,6 @@ export function CaregiverPage() {
     if (saved) { try { return JSON.parse(saved); } catch { return []; } }
     return [];
   });
-  });
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPatientModal, setShowPatientModal] = useState<Patient | null>(null);
