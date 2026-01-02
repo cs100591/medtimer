@@ -36,6 +36,7 @@ export function MedicationsPage() {
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'ongoing'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingMed, setEditingMed] = useState<Medication | null>(null);
   const [newMed, setNewMed] = useState({
     name: '', amount: 1, unit: 'tablet' as DosageUnit, instructions: '',
     frequency: 1, frequencyMode: '12h' as FrequencyMode, firstDoseTime: '08:00', durationDays: 0,
@@ -72,6 +73,53 @@ export function MedicationsPage() {
     try { await api.createMedication(newMedication); } catch (err) { console.log('Saved locally'); }
   };
 
+  const handleEditMedication = async () => {
+    if (!editingMed || !newMed.name) { alert(t('fillAllFields')); return; }
+    const scheduleTimes = calculateScheduleTimes(newMed.firstDoseTime, newMed.frequency, newMed.frequencyMode);
+    
+    const updatedMedication: Medication = {
+      ...editingMed,
+      name: newMed.name,
+      dosage: `${newMed.amount} ${newMed.unit}${newMed.unit === 'tablet' && newMed.amount > 1 ? 's' : ''}`,
+      form: newMed.unit === 'tablet' ? 'tablet' : 'liquid',
+      instructions: newMed.instructions,
+      frequency: newMed.frequency,
+      firstDoseTime: newMed.firstDoseTime,
+      scheduleTimes,
+      durationDays: newMed.durationDays,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setMedications(prev => prev.map(m => m.id === editingMed.id ? updatedMedication : m));
+    setEditingMed(null);
+    setNewMed({ name: '', amount: 1, unit: 'tablet', instructions: '', frequency: 1, frequencyMode: '12h', firstDoseTime: '08:00', durationDays: 0 });
+    try { await api.updateMedication(editingMed.id, updatedMedication); } catch (err) { console.log('Updated locally'); }
+  };
+
+  const startEditMedication = (med: Medication) => {
+    // Parse dosage to get amount and unit
+    const dosageMatch = med.dosage.match(/(\d+)\s*(tablet|ml)/i);
+    const amount = dosageMatch ? parseInt(dosageMatch[1]) : 1;
+    const unit = med.form === 'liquid' || med.dosage.toLowerCase().includes('ml') ? 'ml' : 'tablet';
+    
+    setEditingMed(med);
+    setNewMed({
+      name: med.name,
+      amount,
+      unit: unit as DosageUnit,
+      instructions: med.instructions || '',
+      frequency: med.frequency || 1,
+      frequencyMode: '12h',
+      firstDoseTime: med.firstDoseTime || '08:00',
+      durationDays: med.durationDays || 0,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingMed(null);
+    setNewMed({ name: '', amount: 1, unit: 'tablet', instructions: '', frequency: 1, frequencyMode: '12h', firstDoseTime: '08:00', durationDays: 0 });
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm(t('confirmDelete'))) {
       setMedications(prev => prev.filter(m => m.id !== id));
@@ -85,6 +133,8 @@ export function MedicationsPage() {
   });
 
   const intervalHours = newMed.frequencyMode === '24h' ? Math.floor(24 / newMed.frequency) : Math.floor(12 / newMed.frequency);
+  const isEditing = editingMed !== null;
+  const showForm = showAddForm || isEditing;
 
   return (
     <div className="max-w-4xl mx-auto px-4">
@@ -93,9 +143,11 @@ export function MedicationsPage() {
         <button onClick={() => setShowAddForm(true)} className="btn-primary">+ {t('addMedication')}</button>
       </div>
 
-      {showAddForm && (
+      {showForm && (
         <div className="card p-6 mb-6">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">{t('addNewMedication')}</h2>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+            {isEditing ? (isZh ? '编辑药物' : 'Edit Medication') : t('addNewMedication')}
+          </h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">{t('medicationName')} *</label>
@@ -107,7 +159,7 @@ export function MedicationsPage() {
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">💊 {t('dosage')}</label>
               <div className="segmented-control mb-3">
                 <button type="button" onClick={() => setNewMed({ ...newMed, unit: 'tablet' })}
-                  className={`segmented-item ${newMed.unit === 'tablet' ? 'active' : ''}`}>💊 {t('tablet')}</button>
+                  className={`segmented-item ${newMed.unit === 'tablet' ? 'active' : ''}`}>�' {t('tablet')}</button>
                 <button type="button" onClick={() => setNewMed({ ...newMed, unit: 'ml' })}
                   className={`segmented-item ${newMed.unit === 'ml' ? 'active' : ''}`}>💧 {t('ml')}</button>
               </div>
@@ -178,8 +230,10 @@ export function MedicationsPage() {
             </div>
             
             <div className="flex gap-3 pt-2">
-              <button onClick={handleAddMedication} className="btn-primary flex-1">{t('saveMedication')}</button>
-              <button onClick={() => setShowAddForm(false)} className="btn-secondary flex-1">{t('cancel')}</button>
+              <button onClick={isEditing ? handleEditMedication : handleAddMedication} className="btn-primary flex-1">
+                {isEditing ? (isZh ? '保存更改' : 'Save Changes') : t('saveMedication')}
+              </button>
+              <button onClick={isEditing ? cancelEdit : () => setShowAddForm(false)} className="btn-secondary flex-1">{t('cancel')}</button>
             </div>
           </div>
         </div>
@@ -209,7 +263,7 @@ export function MedicationsPage() {
           </div>
         ) : (
           filteredMeds.map((med) => (
-            <MedicationCard key={med.id} medication={med} onDelete={() => handleDelete(med.id)} isZh={isZh} t={t} />
+            <MedicationCard key={med.id} medication={med} onDelete={() => handleDelete(med.id)} onEdit={() => startEditMedication(med)} isZh={isZh} t={t} />
           ))
         )}
       </div>
@@ -217,7 +271,7 @@ export function MedicationsPage() {
   );
 }
 
-function MedicationCard({ medication, onDelete, isZh, t }: { medication: Medication; onDelete: () => void; isZh: boolean; t: (key: string) => string }) {
+function MedicationCard({ medication, onDelete, onEdit, isZh, t }: { medication: Medication; onDelete: () => void; onEdit: () => void; isZh: boolean; t: (key: string) => string }) {
   const [expanded, setExpanded] = useState(false);
   
   return (
@@ -260,7 +314,10 @@ function MedicationCard({ medication, onDelete, isZh, t }: { medication: Medicat
               <p className="text-sm text-[var(--text-primary)]">{medication.instructions}</p>
             </div>
           )}
-          <button onClick={onDelete} className="btn-danger w-full">🗑️ {isZh ? '删除' : 'Delete'}</button>
+          <div className="flex gap-3">
+            <button onClick={onEdit} className="btn-primary flex-1">✏️ {isZh ? '编辑' : 'Edit'}</button>
+            <button onClick={onDelete} className="btn-danger flex-1">🗑️ {isZh ? '删除' : 'Delete'}</button>
+          </div>
         </div>
       )}
     </div>

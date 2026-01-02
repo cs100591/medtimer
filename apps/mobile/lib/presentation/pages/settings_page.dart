@@ -211,6 +211,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   child: const Text('Test'),
                 ),
               ),
+              const Divider(height: 1),
+              _buildListItem(
+                title: 'Schedule Test',
+                subtitle: 'Schedule notification in 10 seconds',
+                trailing: TextButton(
+                  onPressed: () async {
+                    await NotificationService().scheduleTestNotification();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Notification scheduled for 10 seconds from now!'),
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                      // Refresh the count
+                      await _loadScheduledNotificationsCount();
+                    }
+                  },
+                  child: const Text('Schedule'),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
