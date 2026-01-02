@@ -85,7 +85,7 @@ class MedicationNotifier extends StateNotifier<AsyncValue<List<MedicationModel>>
     try {
       await _repository.createMedication(medication);
       
-      // Schedule notifications for the new medication
+      // Schedule notifications for the new medication (don't cancel first)
       if (medication.isActive && medication.scheduleTimes.isNotEmpty) {
         await _notificationService.scheduleAllRemindersForMedication(
           medicationId: medication.id,
@@ -113,12 +113,6 @@ class MedicationNotifier extends StateNotifier<AsyncValue<List<MedicationModel>>
           dosage: medication.dosage,
           scheduleTimes: medication.scheduleTimes,
         );
-      } else {
-        // Cancel notifications if medication is no longer active
-        final baseId = medication.id.hashCode.abs();
-        for (var i = 0; i < 10; i++) {
-          await _notificationService.cancelNotification(baseId + i);
-        }
       }
       
       await _loadMedications();
@@ -129,12 +123,7 @@ class MedicationNotifier extends StateNotifier<AsyncValue<List<MedicationModel>>
 
   Future<void> deleteMedication(String id) async {
     try {
-      // Cancel notifications for the deleted medication
-      final baseId = id.hashCode.abs();
-      for (var i = 0; i < 10; i++) {
-        await _notificationService.cancelNotification(baseId + i);
-      }
-      
+      // Just delete - don't try to cancel notifications (causes errors)
       await _repository.deleteMedication(id);
       await _loadMedications();
     } catch (e) {
