@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider, useSelector, useDispatch } from 'react-redux';
+import { Analytics } from '@vercel/analytics/react';
 import { store, RootState } from './store';
 import { setUser } from './store/authSlice';
 import { TranslationProvider } from './i18n/TranslationContext';
@@ -44,8 +45,14 @@ function AppRoutes() {
       const user = {
         id: userId,
         email: 'guest@medcare.local',
-        firstName: 'Guest',
-        lastName: 'User',
+        language: 'en',
+        timezone: 'UTC',
+        preferences: {
+          voiceEnabled: false,
+          highContrast: false,
+          fontSize: 'normal' as const,
+          notificationsEnabled: true,
+        },
         createdAt: new Date().toISOString(),
       };
       localStorage.setItem('user_id', userId);
@@ -63,8 +70,14 @@ function AppRoutes() {
     const user = {
       id: userId,
       email: 'guest@medcare.local',
-      firstName: 'Guest',
-      lastName: 'User',
+      language: 'en',
+      timezone: 'UTC',
+      preferences: {
+        voiceEnabled: false,
+        highContrast: false,
+        fontSize: 'normal' as const,
+        notificationsEnabled: true,
+      },
       createdAt: new Date().toISOString(),
     };
     dispatch(setUser(user));
@@ -121,6 +134,7 @@ function App() {
       <TranslationProvider>
         <BrowserRouter>
           <AppRoutes />
+          <Analytics />
         </BrowserRouter>
       </TranslationProvider>
     </Provider>
