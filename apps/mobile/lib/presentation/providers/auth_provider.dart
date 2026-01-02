@@ -16,22 +16,26 @@ class AuthState {
   final AuthStatus status;
   final UserModel? user;
   final String? error;
+  final bool isAnonymous; // Track if user is anonymous (not logged in with account)
 
   AuthState({
     this.status = AuthStatus.initial,
     this.user,
     this.error,
+    this.isAnonymous = true,
   });
 
   AuthState copyWith({
     AuthStatus? status,
     UserModel? user,
     String? error,
+    bool? isAnonymous,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
       error: error,
+      isAnonymous: isAnonymous ?? this.isAnonymous,
     );
   }
 }
@@ -47,22 +51,42 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _init() async {
     debugPrint('AuthNotifier: Initializing...');
     state = state.copyWith(status: AuthStatus.loading);
+    
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final profileComplete = prefs.getBool('profile_setup_complete') ?? false;
+      
+      // Check if user has completed profile setup (anonymous user)
+      if (profileComplete) {
+        debugPrint('AuthNotifier: Profile setup complete, loading local user...');
+        final localUser = await _loadLocalUser();
+        if (localUser != null) {
+          // Check if this is a real authenticated user or anonymous
+          final isAnonymous = prefs.getBool('is_anonymous_user') ?? true;
+          state = AuthState(
+            status: AuthStatus.authenticated, 
+            user: localUser,
+            isAnonymous: isAnonymous,
+          );
+          debugPrint('AuthNotifier: Local user loaded (anonymous: $isAnonymous)');
+          return;
+        }
+      }
+      
+      // Try to load from repository (for real authenticated users)
       await _repository.init();
       if (_repository.isAuthenticated) {
         debugPrint('AuthNotifier: User is authenticated, fetching profile...');
         try {
           final user = await _repository.getProfile();
-          state = AuthState(status: AuthStatus.authenticated, user: user);
+          state = AuthState(status: AuthStatus.authenticated, user: user, isAnonymous: false);
           debugPrint('AuthNotifier: Profile loaded successfully');
         } catch (e) {
           debugPrint('AuthNotifier: Failed to get profile: $e');
-          // Try to load from local storage
           final localUser = await _loadLocalUser();
           if (localUser != null) {
-            state = AuthState(status: AuthStatus.authenticated, user: localUser);
+            state = AuthState(status: AuthStatus.authenticated, user: localUser, isAnonymous: true);
           } else {
-            await _repository.logout();
             state = AuthState(status: AuthStatus.unauthenticated);
           }
         }
@@ -99,7 +123,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return null;
   }
 
-  Future<void> _saveLocalUser(UserModel user) async {
+  Future<void> _saveLocalUser(UserModel user, {bool isAnonymous = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('offline_user_email', user.email);
@@ -111,6 +135,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       await prefs.setString(AppConstants.userIdKey, user.id);
       await prefs.setString(AppConstants.userTokenKey, 'local_token_${DateTime.now().millisecondsSinceEpoch}');
+      await prefs.setBool('is_anonymous_user', isAnonymous);
     } catch (e) {
       debugPrint('Failed to save local user: $e');
     }
@@ -145,15 +170,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         phone: phone,
       );
       debugPrint('AuthNotifier: Registration successful');
-      await _saveLocalUser(user);
-      state = AuthState(status: AuthStatus.authenticated, user: user);
+      await _saveLocalUser(user, isAnonymous: false);
+      state = AuthState(status: AuthStatus.authenticated, user: user, isAnonymous: false);
     } catch (e) {
       debugPrint('AuthNotifier: Registration error: $e');
       // Create local user on any error (offline mode)
       final localUser = _createLocalUser(email, firstName: firstName, lastName: lastName);
-      await _saveLocalUser(localUser);
+      await _saveLocalUser(localUser, isAnonymous: false);
       debugPrint('AuthNotifier: Created local user for offline mode');
-      state = AuthState(status: AuthStatus.authenticated, user: localUser);
+      state = AuthState(status: AuthStatus.authenticated, user: localUser, isAnonymous: false);
     }
   }
 
@@ -170,15 +195,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         password: password,
       );
       debugPrint('AuthNotifier: Login successful');
-      await _saveLocalUser(user);
-      state = AuthState(status: AuthStatus.authenticated, user: user);
+      await _saveLocalUser(user, isAnonymous: false);
+      state = AuthState(status: AuthStatus.authenticated, user: user, isAnonymous: false);
     } catch (e) {
       debugPrint('AuthNotifier: Login error: $e');
       // Create local user on any error (offline mode)
       final localUser = _createLocalUser(email);
-      await _saveLocalUser(localUser);
+      await _saveLocalUser(localUser, isAnonymous: false);
       debugPrint('AuthNotifier: Created local user for offline mode');
-      state = AuthState(status: AuthStatus.authenticated, user: localUser);
+      state = AuthState(status: AuthStatus.authenticated, user: localUser, isAnonymous: false);
     }
   }
 
@@ -194,8 +219,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
       createdAt: DateTime.now(),
     );
     
-    await _saveLocalUser(demoUser);
-    state = AuthState(status: AuthStatus.authenticated, user: demoUser);
+    await _saveLocalUser(demoUser, isAnonymous: true);
+    state = AuthState(status: AuthStatus.authenticated, user: demoUser, isAnonymous: true);
+  }
+
+  // Create anonymous user after profile setup
+  Future<void> createAnonymousUser() async {
+    debugPrint('AuthNotifier: Creating anonymous user');
+    
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id') ?? 'user-${DateTime.now().millisecondsSinceEpoch}';
+    
+    final anonymousUser = UserModel(
+      id: userId,
+      email: 'guest@medcare.local',
+      firstName: 'Guest',
+      lastName: 'User',
+      createdAt: DateTime.now(),
+    );
+    
+    await _saveLocalUser(anonymousUser, isAnonymous: true);
+    state = AuthState(status: AuthStatus.authenticated, user: anonymousUser, isAnonymous: true);
   }
 
   Future<void> logout() async {
@@ -242,6 +286,10 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
 // Convenience providers
 final isAuthenticatedProvider = Provider<bool>((ref) {
   return ref.watch(authProvider).status == AuthStatus.authenticated;
+});
+
+final isAnonymousUserProvider = Provider<bool>((ref) {
+  return ref.watch(authProvider).isAnonymous;
 });
 
 final currentUserProvider = Provider<UserModel?>((ref) {

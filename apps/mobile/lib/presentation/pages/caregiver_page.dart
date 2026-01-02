@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
+import '../providers/auth_provider.dart';
+import '../widgets/login_prompt.dart';
 
-class CaregiverPage extends StatefulWidget {
+class CaregiverPage extends ConsumerStatefulWidget {
   const CaregiverPage({super.key});
 
   @override
-  State<CaregiverPage> createState() => _CaregiverPageState();
+  ConsumerState<CaregiverPage> createState() => _CaregiverPageState();
 }
 
-class _CaregiverPageState extends State<CaregiverPage> {
+class _CaregiverPageState extends ConsumerState<CaregiverPage> {
   List<Map<String, dynamic>> _patients = [];
   List<Map<String, dynamic>> _notifications = [];
   bool _showInviteModal = false;
@@ -54,6 +57,37 @@ class _CaregiverPageState extends State<CaregiverPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('caregiver_patients', jsonEncode(_patients));
     await prefs.setString('caregiver_notifications', jsonEncode(_notifications));
+  }
+
+  void _showLoginDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AuthDialog(
+        isLogin: true,
+        onSubmit: (email, password, {firstName, lastName}) async {
+          final authNotifier = ref.read(authProvider.notifier);
+          await authNotifier.login(email: email, password: password);
+        },
+      ),
+    );
+  }
+
+  void _showSignUpDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AuthDialog(
+        isLogin: false,
+        onSubmit: (email, password, {firstName, lastName}) async {
+          final authNotifier = ref.read(authProvider.notifier);
+          await authNotifier.register(
+            email: email,
+            password: password,
+            firstName: firstName ?? '',
+            lastName: lastName ?? '',
+          );
+        },
+      ),
+    );
   }
 
 
@@ -165,6 +199,32 @@ class _CaregiverPageState extends State<CaregiverPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isAnonymous = ref.watch(isAnonymousUserProvider);
+
+    // Show login prompt for anonymous users
+    if (isAnonymous) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF2F2F7),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Caregiver Portal',
+            style: TextStyle(
+              color: Color(0xFF1C1C1E),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        body: LoginPrompt(
+          title: 'Login Required',
+          description: 'Sign in to access the Caregiver Portal and monitor your patients\' medication adherence across devices.',
+          onLogin: _showLoginDialog,
+          onSignUp: _showSignUpDialog,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
       appBar: AppBar(

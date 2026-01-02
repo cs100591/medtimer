@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from '../i18n/TranslationContext';
+import { LoginPrompt } from '../components/LoginPrompt';
 
 interface Patient {
   id: string; name: string; email: string; permissionLevel: 'view' | 'manage'; status: 'active' | 'pending';
@@ -25,6 +26,9 @@ export function CaregiverPage() {
   const { t, lang } = useTranslation();
   const isZh = lang === 'zh';
   
+  // Check if user is anonymous
+  const isAnonymous = localStorage.getItem('is_anonymous_user') === 'true';
+  
   const [patients, setPatients] = useState<Patient[]>(() => {
     const saved = localStorage.getItem('caregiver_patients');
     if (saved) { try { return JSON.parse(saved); } catch { return []; } }
@@ -35,6 +39,7 @@ export function CaregiverPage() {
     const saved = localStorage.getItem('caregiver_notifications');
     if (saved) { try { return JSON.parse(saved); } catch { return []; } }
     return [];
+  });
   });
 
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -95,6 +100,16 @@ export function CaregiverPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4">
+      {/* Show login prompt for anonymous users */}
+      {isAnonymous ? (
+        <LoginPrompt
+          title={isZh ? '需要登录' : 'Login Required'}
+          description={isZh 
+            ? '登录以访问护理人员门户，跨设备监控患者的服药依从性。' 
+            : 'Sign in to access the Caregiver Portal and monitor your patients\' medication adherence across devices.'}
+        />
+      ) : (
+        <>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{t('caregiverPortal')}</h1>
@@ -276,6 +291,8 @@ export function CaregiverPage() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

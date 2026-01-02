@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../../data/models/medication_model.dart';
 import '../providers/medication_provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/login_prompt.dart';
 
 class AdherencePage extends ConsumerStatefulWidget {
   const AdherencePage({super.key});
@@ -40,6 +41,37 @@ class _AdherencePageState extends ConsumerState<AdherencePage> {
     }
     
     setState(() {});
+  }
+
+  void _showLoginDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AuthDialog(
+        isLogin: true,
+        onSubmit: (email, password, {firstName, lastName}) async {
+          final authNotifier = ref.read(authProvider.notifier);
+          await authNotifier.login(email: email, password: password);
+        },
+      ),
+    );
+  }
+
+  void _showSignUpDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AuthDialog(
+        isLogin: false,
+        onSubmit: (email, password, {firstName, lastName}) async {
+          final authNotifier = ref.read(authProvider.notifier);
+          await authNotifier.register(
+            email: email,
+            password: password,
+            firstName: firstName ?? '',
+            lastName: lastName ?? '',
+          );
+        },
+      ),
+    );
   }
 
   int get _daysToShow {
@@ -233,6 +265,31 @@ class _AdherencePageState extends ConsumerState<AdherencePage> {
   @override
   Widget build(BuildContext context) {
     final userId = ref.watch(currentUserIdProvider);
+    final isAnonymous = ref.watch(isAnonymousUserProvider);
+
+    // Show login prompt for anonymous users
+    if (isAnonymous) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF2F2F7),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Adherence',
+            style: TextStyle(
+              color: Color(0xFF1C1C1E),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        body: LoginPrompt(
+          title: 'Login Required',
+          description: 'Sign in to track your medication adherence history and sync your data across devices.',
+          onLogin: _showLoginDialog,
+          onSignUp: _showSignUpDialog,
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),

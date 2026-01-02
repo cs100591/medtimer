@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n/TranslationContext';
+import { LoginPrompt } from '../components/LoginPrompt';
 import type { Medication } from '../types';
 
 interface ReminderRecord {
@@ -13,6 +14,9 @@ export function AdherencePage() {
   const { t, lang } = useTranslation();
   const isZh = lang === 'zh';
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('week');
+  
+  // Check if user is anonymous
+  const isAnonymous = localStorage.getItem('is_anonymous_user') === 'true';
   
   const [medications] = useState<Medication[]>(() => {
     const saved = localStorage.getItem('medications');
@@ -129,6 +133,21 @@ export function AdherencePage() {
   };
 
   const rateColor = stats.rate >= 0.8 ? 'var(--success)' : stats.rate >= 0.6 ? 'var(--warning)' : 'var(--danger)';
+
+  // Show login prompt for anonymous users
+  if (isAnonymous) {
+    return (
+      <div className="max-w-4xl mx-auto px-4">
+        <h1 className="text-2xl font-semibold text-[var(--text-primary)] mb-6">{t('adherence')}</h1>
+        <LoginPrompt
+          title={isZh ? '需要登录' : 'Login Required'}
+          description={isZh 
+            ? '登录以跟踪您的服药依从性历史记录，并跨设备同步数据。' 
+            : 'Sign in to track your medication adherence history and sync your data across devices.'}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4">
