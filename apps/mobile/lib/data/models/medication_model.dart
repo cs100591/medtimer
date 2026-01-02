@@ -51,28 +51,48 @@ class MedicationModel {
   // Calculate schedule times based on frequency, first dose, and mode
   // mode: '24h' = full day, '12h' = waking hours only (8AM-8PM)
   static List<String> calculateScheduleTimes(String firstTime, int frequency, {String mode = '24h'}) {
-    final times = <String>[_formatTime(firstTime)];
-    if (frequency <= 1) return times;
+    if (frequency <= 1) return [_formatTime(firstTime)];
     
     final parts = firstTime.split(':');
-    final hours = int.parse(parts[0]);
+    final firstHours = int.parse(parts[0]);
     final minutes = int.parse(parts[1]);
-    // 24h mode = spread over 24 hours, 12h mode = spread over 12 waking hours
-    final totalHours = mode == '24h' ? 24 : 12;
-    final intervalHours = totalHours ~/ frequency;
     
-    for (var i = 1; i < frequency; i++) {
-      var newHours = hours + (intervalHours * i);
-      // For 12h mode, cap at reasonable evening time (8PM = 20:00)
-      if (mode == '12h' && newHours > 20) {
-        newHours = 20;
+    final times = <String>[];
+    
+    if (mode == '12h') {
+      // For 12h mode, spread doses evenly during waking hours (6AM to 10PM)
+      // Calculate interval based on frequency
+      final wakingHours = 16; // 6AM to 10PM = 16 hours
+      final intervalHours = wakingHours ~/ frequency;
+      
+      // Start from first dose time, but ensure it's reasonable
+      var startHour = firstHours;
+      if (startHour < 6) startHour = 6;
+      if (startHour > 22) startHour = 8; // Reset to morning if too late
+      
+      for (var i = 0; i < frequency; i++) {
+        var hour = startHour + (intervalHours * i);
+        // Wrap around if needed, but cap at 22:00 (10PM)
+        if (hour > 22) hour = 22;
+        times.add(_formatTimeFromHourMinute(hour, minutes));
       }
-      newHours = newHours % 24;
-      final period = newHours >= 12 ? 'PM' : 'AM';
-      final displayHours = newHours > 12 ? newHours - 12 : (newHours == 0 ? 12 : newHours);
-      times.add('$displayHours:${minutes.toString().padLeft(2, '0')} $period');
+    } else {
+      // 24h mode - spread evenly over 24 hours
+      final intervalHours = 24 ~/ frequency;
+      
+      for (var i = 0; i < frequency; i++) {
+        var hour = (firstHours + (intervalHours * i)) % 24;
+        times.add(_formatTimeFromHourMinute(hour, minutes));
+      }
     }
+    
     return times;
+  }
+  
+  static String _formatTimeFromHourMinute(int hours, int minutes) {
+    final period = hours >= 12 ? 'PM' : 'AM';
+    final displayHours = hours > 12 ? hours - 12 : (hours == 0 ? 12 : hours);
+    return '$displayHours:${minutes.toString().padLeft(2, '0')} $period';
   }
 
   static String _formatTime(String time) {

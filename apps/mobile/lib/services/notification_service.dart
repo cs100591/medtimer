@@ -24,13 +24,13 @@ class NotificationService {
       // Initialize timezone database FIRST
       tz_data.initializeTimeZones();
       
-      // Set local timezone
-      final timeZoneName = _getTimeZoneFromOffset();
+      // Set local timezone - use a simple approach
       try {
+        final timeZoneName = _getTimeZoneFromOffset();
         tz.setLocalLocation(tz.getLocation(timeZoneName));
         debugPrint('NotificationService: Timezone set to $timeZoneName');
       } catch (e) {
-        debugPrint('NotificationService: Failed to set timezone $timeZoneName, using UTC: $e');
+        debugPrint('NotificationService: Using UTC timezone: $e');
         tz.setLocalLocation(tz.UTC);
       }
 
@@ -50,13 +50,13 @@ class NotificationService {
       );
 
       // Initialize the plugin
-      final initResult = await _notifications.initialize(
+      await _notifications.initialize(
         settings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
         onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTapped,
       );
       
-      debugPrint('NotificationService: Plugin initialized: $initResult');
+      debugPrint('NotificationService: Plugin initialized');
 
       // Create notification channel for Android
       await _createNotificationChannel();
@@ -137,8 +137,13 @@ class NotificationService {
         final notifPermission = await android.requestNotificationsPermission();
         debugPrint('NotificationService: Notification permission: $notifPermission');
         
+        // Request exact alarm permission - this is critical for scheduled notifications
         final exactAlarmPermission = await android.requestExactAlarmsPermission();
         debugPrint('NotificationService: Exact alarm permission: $exactAlarmPermission');
+        
+        // Check if we can schedule exact alarms
+        final canSchedule = await android.canScheduleExactNotifications();
+        debugPrint('NotificationService: Can schedule exact notifications: $canSchedule');
       }
 
       // iOS permissions
@@ -228,14 +233,14 @@ class NotificationService {
         iOS: iosDetails,
       );
 
-      // Schedule the notification
+      // Schedule the notification using inexact mode as fallback
       await _notifications.zonedSchedule(
         id,
         '💊 Time for $medicationName',
         'Take $dosage now',
         scheduledDateTime,
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time, // Repeat daily at this time
         payload: 'medication_$id',
@@ -320,76 +325,88 @@ class NotificationService {
   Future<void> showTestNotification() async {
     if (!_initialized) await init();
     
-    const androidDetails = AndroidNotificationDetails(
-      'test_channel',
-      'Test Notifications',
-      channelDescription: 'Test notifications',
-      importance: Importance.max,
-      priority: Priority.max,
-      playSound: true,
-      enableVibration: true,
-    );
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.max,
+        priority: Priority.max,
+        playSound: true,
+        enableVibration: true,
+      );
 
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
 
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+      const details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
 
-    await _notifications.show(
-      0,
-      '💊 Test Notification',
-      'Push notifications are working!',
-      details,
-    );
-    
-    debugPrint('NotificationService: Test notification shown');
+      await _notifications.show(
+        0,
+        '💊 Test Notification',
+        'Push notifications are working!',
+        details,
+      );
+      
+      debugPrint('NotificationService: Test notification shown');
+    } catch (e) {
+      debugPrint('NotificationService: Error showing test notification: $e');
+    }
   }
 
   // Schedule a test notification for 10 seconds from now
   Future<void> scheduleTestNotification() async {
     if (!_initialized) await init();
     
-    final scheduledTime = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 10));
-    
-    const androidDetails = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: _channelDesc,
-      importance: Importance.max,
-      priority: Priority.max,
-      playSound: true,
-      enableVibration: true,
-      fullScreenIntent: true,
-    );
+    try {
+      final scheduledTime = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 10));
+      
+      debugPrint('NotificationService: Scheduling test notification for $scheduledTime');
+      debugPrint('NotificationService: Current time: ${tz.TZDateTime.now(tz.local)}');
+      
+      const androidDetails = AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.max,
+        priority: Priority.max,
+        playSound: true,
+        enableVibration: true,
+        fullScreenIntent: true,
+      );
 
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
 
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+      const details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
 
-    await _notifications.zonedSchedule(
-      99999,
-      '💊 Scheduled Test',
-      'This notification was scheduled 10 seconds ago!',
-      scheduledTime,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-    );
-    
-    debugPrint('NotificationService: Test notification scheduled for $scheduledTime');
+      await _notifications.zonedSchedule(
+        99999,
+        '💊 Scheduled Test',
+        'This notification was scheduled 10 seconds ago!',
+        scheduledTime,
+        details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      
+      debugPrint('NotificationService: Test notification scheduled for $scheduledTime');
+    } catch (e, st) {
+      debugPrint('NotificationService: Error scheduling test notification: $e');
+      debugPrint('Stack trace: $st');
+    }
   }
 
   // Schedule all reminders for a medication
@@ -497,5 +514,22 @@ class NotificationService {
     );
     
     debugPrint('NotificationService: Immediate reminder shown for $medicationName');
+  }
+  
+  // Check notification permission status
+  Future<bool> checkPermissionStatus() async {
+    try {
+      final android = _notifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        final canSchedule = await android.canScheduleExactNotifications();
+        debugPrint('NotificationService: Can schedule exact: $canSchedule');
+        return canSchedule ?? false;
+      }
+      return true; // iOS doesn't need this check
+    } catch (e) {
+      debugPrint('NotificationService: Error checking permission: $e');
+      return false;
+    }
   }
 }
