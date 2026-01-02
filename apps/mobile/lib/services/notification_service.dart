@@ -124,73 +124,77 @@ class NotificationService {
     required String time,
     required bool daily,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-    
-    if (!notificationsEnabled) {
-      debugPrint('Notifications disabled, skipping schedule');
-      return;
-    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      
+      if (!notificationsEnabled) {
+        debugPrint('Notifications disabled, skipping schedule');
+        return;
+      }
 
-    // Parse time string (e.g., "8:00 AM" or "14:30")
-    final scheduledTime = _parseTimeString(time);
-    if (scheduledTime == null) {
-      debugPrint('Failed to parse time: $time');
-      return;
-    }
+      // Parse time string (e.g., "8:00 AM" or "14:30")
+      final scheduledTime = _parseTimeString(time);
+      if (scheduledTime == null) {
+        debugPrint('Failed to parse time: $time');
+        return;
+      }
 
-    final androidDetails = AndroidNotificationDetails(
-      'medication_reminders',
-      'Medication Reminders',
-      channelDescription: 'Reminders to take your medications',
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-      enableVibration: true,
-      playSound: true,
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    if (daily) {
-      // Schedule daily repeating notification
-      await _notifications.zonedSchedule(
-        id,
-        '💊 Time for $medicationName',
-        'Take $dosage',
-        _nextInstanceOfTime(scheduledTime),
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-        payload: 'medication_$id',
+      final androidDetails = AndroidNotificationDetails(
+        'medication_reminders',
+        'Medication Reminders',
+        channelDescription: 'Reminders to take your medications',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+        playSound: true,
       );
-    } else {
-      // Schedule one-time notification
-      await _notifications.zonedSchedule(
-        id,
-        '💊 Time for $medicationName',
-        'Take $dosage',
-        _nextInstanceOfTime(scheduledTime),
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: 'medication_$id',
-      );
-    }
 
-    debugPrint('Scheduled notification for $medicationName at $time');
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      final details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      if (daily) {
+        // Schedule daily repeating notification
+        await _notifications.zonedSchedule(
+          id,
+          '💊 Time for $medicationName',
+          'Take $dosage',
+          _nextInstanceOfTime(scheduledTime),
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.time,
+          payload: 'medication_$id',
+        );
+      } else {
+        // Schedule one-time notification
+        await _notifications.zonedSchedule(
+          id,
+          '💊 Time for $medicationName',
+          'Take $dosage',
+          _nextInstanceOfTime(scheduledTime),
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          payload: 'medication_$id',
+        );
+      }
+
+      debugPrint('Scheduled notification for $medicationName at $time');
+    } catch (e) {
+      debugPrint('Error scheduling medication reminder: $e');
+    }
   }
 
   TimeOfDay? _parseTimeString(String time) {
@@ -242,14 +246,23 @@ class NotificationService {
 
   // Cancel a specific notification
   Future<void> cancelNotification(int id) async {
-    await _notifications.cancel(id);
-    debugPrint('Cancelled notification $id');
+    try {
+      await _notifications.cancel(id);
+      debugPrint('Cancelled notification $id');
+    } catch (e) {
+      // Ignore errors when canceling non-existent notifications
+      debugPrint('Warning: Could not cancel notification $id: $e');
+    }
   }
 
   // Cancel all notifications
   Future<void> cancelAllNotifications() async {
-    await _notifications.cancelAll();
-    debugPrint('Cancelled all notifications');
+    try {
+      await _notifications.cancelAll();
+      debugPrint('Cancelled all notifications');
+    } catch (e) {
+      debugPrint('Warning: Could not cancel all notifications: $e');
+    }
   }
 
   // Show immediate notification (for testing)
@@ -291,6 +304,11 @@ class NotificationService {
     debugPrint('NotificationService: Scheduling reminders for $medicationName');
     debugPrint('NotificationService: Schedule times: $scheduleTimes');
     
+    // Ensure notification service is initialized
+    if (!_initialized) {
+      await init();
+    }
+    
     // Cancel existing notifications for this medication
     final baseId = medicationId.hashCode.abs();
     for (var i = 0; i < 10; i++) {
@@ -299,14 +317,18 @@ class NotificationService {
 
     // Schedule new notifications
     for (var i = 0; i < scheduleTimes.length; i++) {
-      debugPrint('NotificationService: Scheduling notification ${baseId + i} for ${scheduleTimes[i]}');
-      await scheduleMedicationReminder(
-        id: baseId + i,
-        medicationName: medicationName,
-        dosage: dosage,
-        time: scheduleTimes[i],
-        daily: true,
-      );
+      try {
+        debugPrint('NotificationService: Scheduling notification ${baseId + i} for ${scheduleTimes[i]}');
+        await scheduleMedicationReminder(
+          id: baseId + i,
+          medicationName: medicationName,
+          dosage: dosage,
+          time: scheduleTimes[i],
+          daily: true,
+        );
+      } catch (e) {
+        debugPrint('NotificationService: Error scheduling notification: $e');
+      }
     }
     
     debugPrint('NotificationService: Scheduled ${scheduleTimes.length} notifications for $medicationName');
