@@ -3,7 +3,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_timezone/flutter_timezone.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -19,9 +18,9 @@ class NotificationService {
     // Initialize timezone database
     tz_data.initializeTimeZones();
     
-    // Get device timezone using flutter_timezone
+    // Get device timezone from offset
     try {
-      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      final timeZoneName = _getTimeZoneFromOffset();
       tz.setLocalLocation(tz.getLocation(timeZoneName));
       debugPrint('NotificationService: Timezone set to $timeZoneName');
     } catch (e) {
@@ -52,6 +51,50 @@ class NotificationService {
 
     _initialized = true;
     debugPrint('NotificationService initialized successfully');
+  }
+
+  String _getTimeZoneFromOffset() {
+    final now = DateTime.now();
+    final offset = now.timeZoneOffset;
+    final offsetHours = offset.inHours;
+    final offsetMinutes = offset.inMinutes.abs() % 60;
+    
+    // Common timezone mappings based on UTC offset
+    final timezoneMap = {
+      8: 'Asia/Shanghai',      // China, Singapore, Hong Kong, Malaysia
+      9: 'Asia/Tokyo',         // Japan, Korea
+      7: 'Asia/Bangkok',       // Thailand, Vietnam, Indonesia
+      5: 'Asia/Karachi',       // Pakistan
+      0: 'Europe/London',      // UK, Portugal
+      1: 'Europe/Paris',       // Central Europe
+      2: 'Europe/Helsinki',    // Eastern Europe
+      3: 'Europe/Moscow',      // Russia
+      4: 'Asia/Dubai',         // UAE
+      -5: 'America/New_York',  // US Eastern
+      -6: 'America/Chicago',   // US Central
+      -7: 'America/Denver',    // US Mountain
+      -8: 'America/Los_Angeles', // US Pacific
+      -3: 'America/Sao_Paulo', // Brazil
+      10: 'Australia/Sydney',  // Australia Eastern
+      11: 'Pacific/Auckland',  // New Zealand
+    };
+    
+    // Handle India's 5:30 offset
+    if (offsetHours == 5 && offsetMinutes == 30) {
+      return 'Asia/Kolkata';
+    }
+    
+    // Handle Nepal's 5:45 offset
+    if (offsetHours == 5 && offsetMinutes == 45) {
+      return 'Asia/Kathmandu';
+    }
+    
+    // Handle Australia's 9:30 offset
+    if (offsetHours == 9 && offsetMinutes == 30) {
+      return 'Australia/Darwin';
+    }
+    
+    return timezoneMap[offsetHours] ?? 'UTC';
   }
 
   Future<void> _requestPermissions() async {

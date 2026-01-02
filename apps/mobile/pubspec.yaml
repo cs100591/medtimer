@@ -30,7 +30,6 @@ dependencies:
   # Push Notifications
   flutter_local_notifications: ^17.2.1
   timezone: ^0.9.4
-  flutter_timezone: ^1.0.8
   
   # UI Components
   cupertino_icons: ^1.0.6
