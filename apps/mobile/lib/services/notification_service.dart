@@ -11,46 +11,54 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _permissionsGranted = false;
 
   Future<void> init() async {
     if (_initialized) return;
 
-    // Initialize timezone database
-    tz_data.initializeTimeZones();
-    
-    // Get device timezone from offset
     try {
-      final timeZoneName = _getTimeZoneFromOffset();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
-      debugPrint('NotificationService: Timezone set to $timeZoneName');
+      // Initialize timezone database
+      tz_data.initializeTimeZones();
+      
+      // Get device timezone from offset
+      try {
+        final timeZoneName = _getTimeZoneFromOffset();
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+        debugPrint('NotificationService: Timezone set to $timeZoneName');
+      } catch (e) {
+        // Fallback to UTC if timezone detection fails
+        debugPrint('NotificationService: Failed to get timezone, using UTC: $e');
+        tz.setLocalLocation(tz.UTC);
+      }
+
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+
+      const settings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      final initResult = await _notifications.initialize(
+        settings,
+        onDidReceiveNotificationResponse: _onNotificationTapped,
+      );
+      
+      debugPrint('NotificationService: Initialize result: $initResult');
+
+      // Request permissions on Android 13+
+      _permissionsGranted = await _requestPermissions();
+
+      _initialized = true;
+      debugPrint('NotificationService initialized successfully, permissions: $_permissionsGranted');
     } catch (e) {
-      // Fallback to UTC if timezone detection fails
-      debugPrint('NotificationService: Failed to get timezone, using UTC: $e');
-      tz.setLocalLocation(tz.UTC);
+      debugPrint('NotificationService: Error during initialization: $e');
+      _initialized = true; // Mark as initialized to prevent repeated attempts
     }
-
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const settings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await _notifications.initialize(
-      settings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
-
-    // Request permissions on Android 13+
-    await _requestPermissions();
-
-    _initialized = true;
-    debugPrint('NotificationService initialized successfully');
   }
 
   String _getTimeZoneFromOffset() {
@@ -97,17 +105,25 @@ class NotificationService {
     return timezoneMap[offsetHours] ?? 'UTC';
   }
 
-  Future<void> _requestPermissions() async {
-    final android = _notifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      // Request notification permission
-      final granted = await android.requestNotificationsPermission();
-      debugPrint('NotificationService: Notification permission granted: $granted');
-      
-      // Request exact alarm permission for scheduled notifications
-      final exactAlarmGranted = await android.requestExactAlarmsPermission();
-      debugPrint('NotificationService: Exact alarm permission granted: $exactAlarmGranted');
+  Future<bool> _requestPermissions() async {
+    try {
+      final android = _notifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        // Request notification permission
+        final granted = await android.requestNotificationsPermission();
+        debugPrint('NotificationService: Notification permission granted: $granted');
+        
+        // Request exact alarm permission for scheduled notifications
+        final exactAlarmGranted = await android.requestExactAlarmsPermission();
+        debugPrint('NotificationService: Exact alarm permission granted: $exactAlarmGranted');
+        
+        return granted == true;
+      }
+      return true; // iOS handles permissions differently
+    } catch (e) {
+      debugPrint('NotificationService: Error requesting permissions: $e');
+      return false;
     }
   }
 
@@ -117,7 +133,7 @@ class NotificationService {
   }
 
   // Schedule a medication reminder
-  Future<void> scheduleMedicationReminder({
+  Future<bool> scheduleMedicationReminder({
     required int id,
     required String medicationName,
     required String dosage,
@@ -125,19 +141,24 @@ class NotificationService {
     required bool daily,
   }) async {
     try {
+      // Ensure initialized
+      if (!_initialized) {
+        await init();
+      }
+      
       final prefs = await SharedPreferences.getInstance();
       final notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
       
       if (!notificationsEnabled) {
-        debugPrint('Notifications disabled, skipping schedule');
-        return;
+        debugPrint('NotificationService: Notifications disabled, skipping schedule');
+        return false;
       }
 
       // Parse time string (e.g., "8:00 AM" or "14:30")
       final scheduledTime = _parseTimeString(time);
       if (scheduledTime == null) {
-        debugPrint('Failed to parse time: $time');
-        return;
+        debugPrint('NotificationService: Failed to parse time: $time');
+        return false;
       }
 
       final androidDetails = AndroidNotificationDetails(
@@ -149,6 +170,7 @@ class NotificationService {
         icon: '@mipmap/ic_launcher',
         enableVibration: true,
         playSound: true,
+        styleInformation: const BigTextStyleInformation(''),
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -162,13 +184,16 @@ class NotificationService {
         iOS: iosDetails,
       );
 
+      final scheduledDateTime = _nextInstanceOfTime(scheduledTime);
+      debugPrint('NotificationService: Scheduling notification $id for $medicationName at $scheduledDateTime');
+
       if (daily) {
         // Schedule daily repeating notification
         await _notifications.zonedSchedule(
           id,
           '💊 Time for $medicationName',
           'Take $dosage',
-          _nextInstanceOfTime(scheduledTime),
+          scheduledDateTime,
           details,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
@@ -182,7 +207,7 @@ class NotificationService {
           id,
           '💊 Time for $medicationName',
           'Take $dosage',
-          _nextInstanceOfTime(scheduledTime),
+          scheduledDateTime,
           details,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
@@ -191,9 +216,12 @@ class NotificationService {
         );
       }
 
-      debugPrint('Scheduled notification for $medicationName at $time');
-    } catch (e) {
-      debugPrint('Error scheduling medication reminder: $e');
+      debugPrint('NotificationService: Successfully scheduled notification for $medicationName at $time (id: $id)');
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('NotificationService: Error scheduling medication reminder: $e');
+      debugPrint('NotificationService: Stack trace: $stackTrace');
+      return false;
     }
   }
 
@@ -295,7 +323,7 @@ class NotificationService {
   }
 
   // Schedule all reminders for a medication
-  Future<void> scheduleAllRemindersForMedication({
+  Future<int> scheduleAllRemindersForMedication({
     required String medicationId,
     required String medicationName,
     required String dosage,
@@ -309,29 +337,41 @@ class NotificationService {
       await init();
     }
     
-    // Cancel existing notifications for this medication
-    final baseId = medicationId.hashCode.abs();
+    // Generate a stable base ID from medication ID
+    final baseId = medicationId.hashCode.abs() % 100000; // Keep ID in reasonable range
+    debugPrint('NotificationService: Base notification ID: $baseId');
+    
+    // Cancel existing notifications for this medication first
     for (var i = 0; i < 10; i++) {
       await cancelNotification(baseId + i);
     }
 
     // Schedule new notifications
+    int successCount = 0;
     for (var i = 0; i < scheduleTimes.length; i++) {
-      try {
-        debugPrint('NotificationService: Scheduling notification ${baseId + i} for ${scheduleTimes[i]}');
-        await scheduleMedicationReminder(
-          id: baseId + i,
-          medicationName: medicationName,
-          dosage: dosage,
-          time: scheduleTimes[i],
-          daily: true,
-        );
-      } catch (e) {
-        debugPrint('NotificationService: Error scheduling notification: $e');
+      final notificationId = baseId + i;
+      debugPrint('NotificationService: Scheduling notification $notificationId for ${scheduleTimes[i]}');
+      
+      final success = await scheduleMedicationReminder(
+        id: notificationId,
+        medicationName: medicationName,
+        dosage: dosage,
+        time: scheduleTimes[i],
+        daily: true,
+      );
+      
+      if (success) {
+        successCount++;
       }
     }
     
-    debugPrint('NotificationService: Scheduled ${scheduleTimes.length} notifications for $medicationName');
+    debugPrint('NotificationService: Scheduled $successCount/${scheduleTimes.length} notifications for $medicationName');
+    
+    // Verify scheduled notifications
+    final pending = await getPendingNotifications();
+    debugPrint('NotificationService: Total pending notifications: ${pending.length}');
+    
+    return successCount;
   }
 
   // Get notification settings
@@ -352,7 +392,33 @@ class NotificationService {
 
   // Get list of pending notifications (for debugging)
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    return await _notifications.pendingNotificationRequests();
+    try {
+      return await _notifications.pendingNotificationRequests();
+    } catch (e) {
+      debugPrint('NotificationService: Error getting pending notifications: $e');
+      return [];
+    }
+  }
+
+  // Check if notification service is ready
+  bool get isReady => _initialized && _permissionsGranted;
+  
+  // Get initialization status
+  Map<String, dynamic> getStatus() {
+    return {
+      'initialized': _initialized,
+      'permissionsGranted': _permissionsGranted,
+    };
+  }
+
+  // Debug: Print all pending notifications
+  Future<void> debugPrintPendingNotifications() async {
+    final pending = await getPendingNotifications();
+    debugPrint('=== Pending Notifications (${pending.length}) ===');
+    for (final notification in pending) {
+      debugPrint('  ID: ${notification.id}, Title: ${notification.title}, Body: ${notification.body}');
+    }
+    debugPrint('=== End Pending Notifications ===');
   }
 
   // Show immediate medication reminder (for testing a specific medication)
