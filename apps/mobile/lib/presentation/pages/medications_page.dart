@@ -125,13 +125,15 @@ class MedicationsPage extends ConsumerWidget {
     );
   }
 
-  void _openMedicationDetails(BuildContext context, WidgetRef ref, MedicationModel medication) {
-    Navigator.push(
+  void _openMedicationDetails(BuildContext context, WidgetRef ref, MedicationModel medication) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MedicationDetailsPage(medication: medication),
       ),
     );
+    // Refresh medications list when returning from details page
+    ref.invalidate(medicationsProvider(medication.userId));
   }
 
   void _addMedication(BuildContext context, WidgetRef ref, String userId) async {
@@ -412,7 +414,12 @@ class _AddMedicationPageState extends ConsumerState<AddMedicationPage> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.water_drop),
               ),
-              validator: (v) => v?.isEmpty == true ? 'Required' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Please enter medication name';
+                }
+                return null;
+              },
               textCapitalization: TextCapitalization.words,
             ),
             const SizedBox(height: 24),
@@ -882,7 +889,12 @@ class _EditMedicationPageState extends ConsumerState<EditMedicationPage> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.water_drop),
               ),
-              validator: (v) => v?.isEmpty == true ? 'Required' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Please enter medication name';
+                }
+                return null;
+              },
               textCapitalization: TextCapitalization.words,
             ),
             const SizedBox(height: 24),
