@@ -40,7 +40,7 @@ export function SettingsPage() {
     const data = { settings: { language: lang, fontSize, highContrast, notifications }, exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `medcare-data-${new Date().toISOString().split('T')[0]}.json`; a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `medtimer-data-${new Date().toISOString().split('T')[0]}.json`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -139,7 +139,7 @@ export function SettingsPage() {
               <span className="text-2xl">💊</span>
             </div>
             <div>
-              <p className="font-semibold text-[var(--text-primary)]">MedCare</p>
+              <p className="font-semibold text-[var(--text-primary)]">MedTimer</p>
               <p className="text-sm text-[var(--text-secondary)]">{t('version')} 1.0.0</p>
             </div>
           </div>

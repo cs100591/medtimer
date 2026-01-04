@@ -73,7 +73,7 @@ export function LoginPage() {
             <span className="text-4xl">💊</span>
           </div>
           <h1 className="text-3xl font-semibold mt-6 text-[var(--text-primary)]">
-            MedCare
+            MedTimer
           </h1>
           <p className="text-[var(--text-secondary)] mt-2">{t('yourCompanion')}</p>
         </div>

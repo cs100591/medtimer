@@ -63,7 +63,7 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
               <span className="text-4xl">💊</span>
             </div>
             <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-              {isZh ? '欢迎使用 MedCare!' : 'Welcome to MedCare!'}
+              {isZh ? '欢迎使用 MedTimer!' : 'Welcome to MedTimer!'}
             </h2>
             <p className="text-[var(--text-secondary)] mt-2">
               {isZh ? '让我们设置您的个人资料' : "Let's set up your profile"}
@@ -76,12 +76,12 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
               {isZh ? '年龄' : 'Age'} *
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]">🎂</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] text-lg">🎂</span>
               <input
                 type="number"
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
-                className="input pl-10"
+                className="input pl-12"
                 placeholder={isZh ? '输入您的年龄' : 'Enter your age'}
                 min="1"
                 max="120"
@@ -129,12 +129,12 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
               {isZh ? '身高 (可选)' : 'Height (optional)'}
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]">📏</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] text-lg">📏</span>
               <input
                 type="number"
                 value={height}
                 onChange={(e) => setHeight(e.target.value)}
-                className="input pl-10"
+                className="input pl-12"
                 placeholder={isZh ? '输入您的身高' : 'Enter your height'}
                 step="0.1"
               />
@@ -148,12 +148,12 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
               {isZh ? '体重 (可选)' : 'Weight (optional)'}
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]">⚖️</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] text-lg">⚖️</span>
               <input
                 type="number"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
-                className="input pl-10"
+                className="input pl-12"
                 placeholder={isZh ? '输入您的体重' : 'Enter your weight'}
                 step="0.1"
               />

@@ -36,7 +36,7 @@ export function Navbar() {
                 <span className="text-xl">💊</span>
               </div>
               <span className="font-semibold text-xl text-[var(--text-primary)]">
-                MedCare
+                MedTimer
               </span>
             </Link>
             
@@ -88,7 +88,7 @@ export function Navbar() {
               <span className="text-base">💊</span>
             </div>
             <span className="font-semibold text-lg text-[var(--text-primary)]">
-              MedCare
+              MedTimer
             </span>
           </Link>
           

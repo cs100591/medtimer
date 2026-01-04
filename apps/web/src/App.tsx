@@ -43,7 +43,7 @@ function AppRoutes() {
       const userId = localStorage.getItem('user_id') || `user-${Date.now()}`;
       const user = {
         id: userId,
-        email: 'guest@medcare.local',
+        email: 'guest@medtimer.local',
         name: 'Guest User',
         language: 'en',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
@@ -69,7 +69,7 @@ function AppRoutes() {
     const userId = localStorage.getItem('user_id') || `user-${Date.now()}`;
     const user = {
       id: userId,
-      email: 'guest@medcare.local',
+      email: 'guest@medtimer.local',
       name: 'Guest User',
       language: 'en',
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
