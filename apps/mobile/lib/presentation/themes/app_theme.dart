@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Primary color constant
-  static const Color primaryColor = Colors.blue;
+  static const Color primaryColor = Color(0xFF0EA5E9);
   
   // Standard theme
   static ThemeData lightTheme({double fontScale = 1.0}) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.blue,
+        seedColor: const Color(0xFF0EA5E9),
+        primary: const Color(0xFF0EA5E9),
+        secondary: const Color(0xFF0284C7), // Primary 600
+        surface: const Color(0xFFF8FAFC), // Slate 50
         brightness: Brightness.light,
       ),
       textTheme: _buildTextTheme(fontScale, Colors.black87),
