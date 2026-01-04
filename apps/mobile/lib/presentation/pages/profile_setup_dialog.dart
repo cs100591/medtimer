@@ -231,7 +231,11 @@ class _ProfileSetupDialogState extends State<ProfileSetupDialog> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Color(0xFFAEAEB2)),
-            prefixIcon: Icon(icon, color: const Color(0xFF8E8E93)),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 12, right: 8),
+              child: Icon(icon, color: const Color(0xFF8E8E93), size: 22),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             suffixText: suffix,
             suffixStyle: const TextStyle(color: Color(0xFF8E8E93)),
             filled: true,
