@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MedTimer Icon Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; background: #f0f0f0; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { color: #0ea5e9; }
+    .preview { display: flex; gap: 20px; flex-wrap: wrap; margin: 20px 0; }
+    .icon-box { background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .icon-box p { margin: 10px 0 0; color: #666; font-size: 14px; }
+    canvas { display: block; margin: 0 auto; }
+    button { background: #0ea5e9; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 5px; }
+    button:hover { background: #0284c7; }
+    .instructions { background: white; padding: 20px; border-radius: 12px; margin-top: 20px; }
+    .instructions ol { line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 MedTimer App Icon Generator</h1>
+    <p>Click the buttons below to download the app icons in different sizes.</p>
+    
+    <div class="preview">
+      <div class="icon-box">
+        <canvas id="icon1024" width="1024" height="1024"></canvas>
+        <p>1024x1024 (App Store)</p>
+        <button onclick="download('icon1024', 'app_icon.png')">Download</button>
+      </div>
+      <div class="icon-box">
+        <canvas id="icon512" width="512" height="512"></canvas>
+        <p>512x512 (Play Store)</p>
+        <button onclick="download('icon512', 'app_icon_512.png')">Download</button>
+      </div>
+      <div class="icon-box">
+        <canvas id="icon192" width="192" height="192"></canvas>
+        <p>192x192 (xxxhdpi)</p>
+        <button onclick="download('icon192', 'ic_launcher.png')">Download</button>
+      </div>
+    </div>
+    
+    <button onclick="downloadAll()">📥 Download All Sizes</button>
+    
+    <div class="instructions">
+      <h3>📱 How to use:</h3>
+      <ol>
+        <li>Click "Download" to save the 1024x1024 icon as <code>app_icon.png</code></li>
+        <li>Place it in <code>apps/mobile/assets/app_icon.png</code></li>
+        <li>Run: <code>flutter pub get</code></li>
+        <li>Run: <code>dart run flutter_launcher_icons</code></li>
+        <li>The icons will be generated for both Android and iOS!</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    function drawIcon(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const scale = size / 1024;
+      
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#38bdf8');
+      gradient.addColorStop(1, '#0284c7');
+      
+      // Draw rounded rectangle background
+      const radius = 224 * scale;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, radius);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      // Glass shine
+      const shineGradient = ctx.createLinearGradient(0, 0, 0, size/2);
+      shineGradient.addColorStop(0, 'rgba(255,255,255,0.4)');
+      shineGradient.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.beginPath();
+      ctx.roundRect(64*scale, 64*scale, 896*scale, 448*scale, 180*scale);
+      ctx.fillStyle = shineGradient;
+      ctx.fill();
+      
+      // Draw pill (rotated -45 degrees)
+      ctx.save();
+      ctx.translate(size/2, size/2);
+      ctx.rotate(-45 * Math.PI / 180);
+      ctx.translate(-size/2, -size/2);
+      
+      // Shadow
+      ctx.beginPath();
+      ctx.ellipse(520*scale, 530*scale, 130*scale, 260*scale, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.1)';
+      ctx.fill();
+      
+      // White top half
+      ctx.beginPath();
+      ctx.moveTo(384*scale, 512*scale);
+      ctx.lineTo(384*scale, 384*scale);
+      ctx.quadraticCurveTo(384*scale, 256*scale, 512*scale, 256*scale);
+      ctx.quadraticCurveTo(640*scale, 256*scale, 640*scale, 384*scale);
+      ctx.lineTo(640*scale, 512*scale);
+      ctx.closePath();
+      ctx.fillStyle = 'white';
+      ctx.fill();
+      
+      // Yellow bottom half
+      ctx.beginPath();
+      ctx.moveTo(384*scale, 512*scale);
+      ctx.lineTo(384*scale, 640*scale);
+      ctx.quadraticCurveTo(384*scale, 768*scale, 512*scale, 768*scale);
+      ctx.quadraticCurveTo(640*scale, 768*scale, 640*scale, 640*scale);
+      ctx.lineTo(640*scale, 512*scale);
+      ctx.closePath();
+      ctx.fillStyle = '#fbbf24';
+      ctx.fill();
+      
+      // Shine on pill
+      ctx.beginPath();
+      ctx.ellipse(450*scale, 380*scale, 40*scale, 80*scale, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fill();
+      
+      ctx.restore();
+    }
+    
+    function download(canvasId, filename) {
+      const canvas = document.getElementById(canvasId);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+    
+    function downloadAll() {
+      download('icon1024', 'app_icon.png');
+      setTimeout(() => download('icon512', 'app_icon_512.png'), 500);
+      setTimeout(() => download('icon192', 'ic_launcher.png'), 1000);
+    }
+    
+    // Draw all icons on load
+    window.onload = function() {
+      drawIcon(document.getElementById('icon1024'));
+      drawIcon(document.getElementById('icon512'));
+      drawIcon(document.getElementById('icon192'));
+    };
+  </script>
+</body>
+</html>

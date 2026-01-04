@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  
+  <!-- Glass shine -->
+  <rect x="64" y="64" width="896" height="448" rx="180" fill="url(#shine)"/>
+  
+  <!-- Pill capsule rotated 45 degrees -->
+  <g transform="translate(512,512) rotate(-45) translate(-512,-512)">
+    <!-- Shadow -->
+    <ellipse cx="520" cy="530" rx="130" ry="260" fill="rgba(0,0,0,0.1)"/>
+    
+    <!-- White top half -->
+    <path d="M384 512 L384 384 Q384 256 512 256 Q640 256 640 384 L640 512 Z" fill="white"/>
+    
+    <!-- Yellow bottom half -->
+    <path d="M384 512 L384 640 Q384 768 512 768 Q640 768 640 640 L640 512 Z" fill="#fbbf24"/>
+    
+    <!-- Shine on pill -->
+    <ellipse cx="450" cy="380" rx="40" ry="80" fill="rgba(255,255,255,0.6)"/>
+  </g>
+</svg>
