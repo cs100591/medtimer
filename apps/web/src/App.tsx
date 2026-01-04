@@ -16,11 +16,11 @@ import { RegisterPage } from './pages/RegisterPage';
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  
+
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -33,7 +33,7 @@ function AppRoutes() {
   useEffect(() => {
     // Check if profile setup is complete
     const profileComplete = localStorage.getItem('profile_setup_complete') === 'true';
-    
+
     if (!profileComplete) {
       // First launch - show profile setup
       setShowProfileSetup(true);
@@ -94,11 +94,11 @@ function AppRoutes() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
+    <div className="min-h-screen bg-transparent">
       {showProfileSetup && (
         <ProfileSetupModal onComplete={handleProfileSetupComplete} />
       )}
-      
+
       {!showProfileSetup && (
         <>
           <Navbar />
@@ -111,14 +111,14 @@ function AppRoutes() {
               <Route path="/register" element={
                 <AuthRoute><RegisterPage /></AuthRoute>
               } />
-              
+
               {/* Main routes - no longer protected */}
               <Route path="/" element={<HomePage />} />
               <Route path="/medications" element={<MedicationsPage />} />
               <Route path="/adherence" element={<AdherencePage />} />
               <Route path="/caregiver" element={<CaregiverPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              
+
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

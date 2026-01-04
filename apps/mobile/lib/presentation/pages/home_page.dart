@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -165,11 +166,24 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
     final user = ref.watch(currentUserProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
-      body: SafeArea(
-        child: userId == null
-            ? const Center(child: CircularProgressIndicator())
-            : _buildBody(context, userId, user?.fullName ?? 'there', now),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+             center: Alignment(0, -1.2), // Top center
+             radius: 1.5,
+             colors: [
+               Color(0xFFE0F2FE), // Primary 100
+               Color(0xFFF8FAFC), // Slate 50
+             ],
+             stops: [0.0, 0.4],
+          ),
+        ),
+        child: SafeArea(
+          child: userId == null
+              ? const Center(child: CircularProgressIndicator())
+              : _buildBody(context, userId, user?.fullName ?? 'there', now),
+        ),
       ),
     );
   }
@@ -391,19 +405,24 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
             ? const Color(0xFFFF9500)
             : const Color(0xFF007AFF);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.7),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.6), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0EA5E9).withOpacity(0.1), // Soft Primary Shadow
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-        ],
-      ),
       child: Row(
         children: [
           Expanded(
@@ -503,7 +522,7 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
           ),
         ],
       ),
-    );
+    )));
   }
 
   Widget _buildEmptyState() {
@@ -555,11 +574,12 @@ class _TodayTabState extends ConsumerState<_TodayTab> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: isExpanded ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.6)),
         boxShadow: isExpanded
-            ? [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))]
-            : null,
+            ? [BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 8))]
+            : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [

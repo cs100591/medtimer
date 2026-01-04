@@ -12,6 +12,7 @@
     "dev:web": "npm run dev --workspace=apps/web",
     "build:backend": "npm run build --workspace=apps/backend",
     "build:web": "npm run build --workspace=apps/web",
+    "build": "npm run build:web",
     "test": "npm run test --workspaces --if-present",
     "test:backend": "npm run test --workspace=apps/backend",
     "lint": "npm run lint --workspaces --if-present",
