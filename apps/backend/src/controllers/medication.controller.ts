@@ -3,10 +3,58 @@ import { medicationService } from '../services/medication.service';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { ValidationError } from '../middleware/error.middleware';
 
+// 安全的数字解析辅助函数
+function safeParseFloat(value: any, fieldName: string): number {
+  if (value === undefined || value === null || value === '') {
+    throw new ValidationError(`${fieldName} is required`);
+  }
+  const parsed = parseFloat(value);
+  if (isNaN(parsed)) {
+    throw new ValidationError(`${fieldName} must be a valid number`);
+  }
+  return parsed;
+}
+
+function safeParseInt(value: any, fieldName: string): number {
+  if (value === undefined || value === null || value === '') {
+    throw new ValidationError(`${fieldName} is required`);
+  }
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) {
+    throw new ValidationError(`${fieldName} must be a valid integer`);
+  }
+  return parsed;
+}
+
+function safeParseFloatOptional(value: any): number | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
+function safeParseIntOptional(value: any): number | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
+// 获取已验证的用户ID
+function getUserId(req: AuthenticatedRequest): string {
+  const userId = req.user?.userId;
+  if (!userId) {
+    throw new ValidationError('User authentication required');
+  }
+  return userId;
+}
+
 export class MedicationController {
   async create(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
       const { 
         name, 
         genericName,
@@ -36,7 +84,7 @@ export class MedicationController {
       const medication = await medicationService.createMedication(userId, {
         name,
         genericName,
-        dosageAmount: parseFloat(dosageAmount),
+        dosageAmount: safeParseFloat(dosageAmount, 'dosageAmount'),
         dosageUnit,
         dosageStrength,
         form,
@@ -49,10 +97,10 @@ export class MedicationController {
         isRescueMedication,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
-        currentSupply: currentSupply ? parseInt(currentSupply, 10) : undefined,
-        lowSupplyThreshold: lowSupplyThreshold ? parseInt(lowSupplyThreshold, 10) : undefined,
-        costPerUnit: costPerUnit ? parseFloat(costPerUnit) : undefined,
-        insuranceCopay: insuranceCopay ? parseFloat(insuranceCopay) : undefined,
+        currentSupply: safeParseIntOptional(currentSupply),
+        lowSupplyThreshold: safeParseIntOptional(lowSupplyThreshold),
+        costPerUnit: safeParseFloatOptional(costPerUnit),
+        insuranceCopay: safeParseFloatOptional(insuranceCopay),
       });
 
       res.status(201).json({
@@ -66,7 +114,7 @@ export class MedicationController {
 
   async getById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
       const { id } = req.params;
 
       const medication = await medicationService.getMedication(id, userId);
@@ -82,7 +130,7 @@ export class MedicationController {
 
   async list(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
       const { 
         query, 
         isActive, 
@@ -96,8 +144,8 @@ export class MedicationController {
         query: query as string,
         isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
         isCritical: isCritical === 'true' ? true : isCritical === 'false' ? false : undefined,
-        page: parseInt(page as string, 10),
-        limit: parseInt(limit as string, 10),
+        page: safeParseIntOptional(page) || 1,
+        limit: safeParseIntOptional(limit) || 20,
       });
 
       res.json({
@@ -119,25 +167,25 @@ export class MedicationController {
 
   async update(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
       const { id } = req.params;
       const updateData = req.body;
 
       // Parse numeric fields if present
-      if (updateData.dosageAmount) {
-        updateData.dosageAmount = parseFloat(updateData.dosageAmount);
+      if (updateData.dosageAmount !== undefined) {
+        updateData.dosageAmount = safeParseFloat(updateData.dosageAmount, 'dosageAmount');
       }
-      if (updateData.currentSupply) {
-        updateData.currentSupply = parseInt(updateData.currentSupply, 10);
+      if (updateData.currentSupply !== undefined) {
+        updateData.currentSupply = safeParseInt(updateData.currentSupply, 'currentSupply');
       }
-      if (updateData.lowSupplyThreshold) {
-        updateData.lowSupplyThreshold = parseInt(updateData.lowSupplyThreshold, 10);
+      if (updateData.lowSupplyThreshold !== undefined) {
+        updateData.lowSupplyThreshold = safeParseInt(updateData.lowSupplyThreshold, 'lowSupplyThreshold');
       }
-      if (updateData.costPerUnit) {
-        updateData.costPerUnit = parseFloat(updateData.costPerUnit);
+      if (updateData.costPerUnit !== undefined) {
+        updateData.costPerUnit = safeParseFloat(updateData.costPerUnit, 'costPerUnit');
       }
-      if (updateData.insuranceCopay) {
-        updateData.insuranceCopay = parseFloat(updateData.insuranceCopay);
+      if (updateData.insuranceCopay !== undefined) {
+        updateData.insuranceCopay = safeParseFloat(updateData.insuranceCopay, 'insuranceCopay');
       }
       if (updateData.endDate) {
         updateData.endDate = new Date(updateData.endDate);
@@ -156,7 +204,7 @@ export class MedicationController {
 
   async delete(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
       const { id } = req.params;
 
       await medicationService.deleteMedication(id, userId);
@@ -172,7 +220,7 @@ export class MedicationController {
 
   async deactivate(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
       const { id } = req.params;
 
       const medication = await medicationService.deactivateMedication(id, userId);
@@ -196,7 +244,7 @@ export class MedicationController {
 
       const medications = await medicationService.searchMedications(
         query as string,
-        parseInt(limit as string, 10)
+        safeParseIntOptional(limit) || 10
       );
 
       res.json({
@@ -210,7 +258,7 @@ export class MedicationController {
 
   async getLowSupply(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
 
       const medications = await medicationService.getLowSupplyMedications(userId);
 
@@ -225,7 +273,7 @@ export class MedicationController {
 
   async updateSupply(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
       const { id } = req.params;
       const { change } = req.body;
 
@@ -236,7 +284,7 @@ export class MedicationController {
       const medication = await medicationService.updateSupply(
         id, 
         userId, 
-        parseInt(change, 10)
+        safeParseInt(change, 'change')
       );
 
       res.json({
@@ -250,7 +298,7 @@ export class MedicationController {
 
   async recordRefill(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
       const { id } = req.params;
       const { quantity } = req.body;
 
@@ -261,7 +309,7 @@ export class MedicationController {
       const medication = await medicationService.recordRefill(
         id, 
         userId, 
-        parseInt(quantity, 10)
+        safeParseInt(quantity, 'quantity')
       );
 
       res.json({
@@ -275,7 +323,7 @@ export class MedicationController {
 
   async getEmergencyInfo(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = getUserId(req);
 
       const emergencyInfo = await medicationService.getEmergencyInfo(userId);
 

@@ -9,6 +9,8 @@
     <!-- Exact alarm permissions for scheduled notifications -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <!-- Battery optimization permission -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <application
         android:label="medication_reminder"
         android:name="${applicationName}"

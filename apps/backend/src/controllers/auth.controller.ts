@@ -92,7 +92,10 @@ export class AuthController {
   async changePassword(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { currentPassword, newPassword } = req.body;
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
 
       if (!currentPassword || !newPassword) {
         throw new ValidationError('Current password and new password are required');
@@ -111,7 +114,10 @@ export class AuthController {
 
   async getProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const user = await userRepository.findByIdOrFail(userId);
 
       res.json({
@@ -151,7 +157,10 @@ export class AuthController {
 
   async updateProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const updateData = req.body;
 
       const user = await userRepository.update(userId, updateData);
@@ -173,7 +182,10 @@ export class AuthController {
 
   async deleteAccount(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       
       await userRepository.delete(userId);
 

@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:disable_battery_optimization/disable_battery_optimization.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -23,7 +24,7 @@ class NotificationService {
     try {
       // Initialize timezone database
       tz_data.initializeTimeZones();
-      tz.setLocalLocation(tz.getLocation('Asia/Shanghai')); // Default to China timezone
+      tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
       
       debugPrint('NotificationService: Timezone set to Asia/Shanghai');
 
@@ -91,11 +92,8 @@ class NotificationService {
       final android = _notifications.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       if (android != null) {
-        final notifPermission = await android.requestNotificationsPermission();
-        debugPrint('NotificationService: Notification permission: $notifPermission');
-        
-        final exactAlarmPermission = await android.requestExactAlarmsPermission();
-        debugPrint('NotificationService: Exact alarm permission: $exactAlarmPermission');
+        await android.requestNotificationsPermission();
+        await android.requestExactAlarmsPermission();
       }
 
       final ios = _notifications.resolvePlatformSpecificImplementation<
@@ -112,7 +110,74 @@ class NotificationService {
     debugPrint('NotificationService: Notification tapped: ${response.payload}');
   }
 
-  // Show an immediate notification - this should always work
+  // ============ BATTERY OPTIMIZATION METHODS ============
+
+  /// Check if battery optimization is disabled (app is whitelisted)
+  Future<bool> isBatteryOptimizationDisabled() async {
+    try {
+      final isDisabled = await DisableBatteryOptimization.isBatteryOptimizationDisabled;
+      debugPrint('NotificationService: Battery optimization disabled: $isDisabled');
+      return isDisabled ?? false;
+    } catch (e) {
+      debugPrint('NotificationService: Error checking battery optimization: $e');
+      return false;
+    }
+  }
+
+  /// Request to disable battery optimization (shows system dialog)
+  Future<bool> requestDisableBatteryOptimization() async {
+    try {
+      final result = await DisableBatteryOptimization.showDisableBatteryOptimizationSettings();
+      debugPrint('NotificationService: Battery optimization request result: $result');
+      return result ?? false;
+    } catch (e) {
+      debugPrint('NotificationService: Error requesting battery optimization: $e');
+      return false;
+    }
+  }
+
+  /// Show manufacturer-specific auto-start settings (for Xiaomi, Huawei, etc.)
+  Future<bool> showAutoStartSettings() async {
+    try {
+      final result = await DisableBatteryOptimization.showEnableAutoStartSettings(
+        "Enable Auto Start",
+        "To receive medication reminders reliably, please enable auto-start for this app.",
+      );
+      debugPrint('NotificationService: Auto-start settings result: $result');
+      return result ?? false;
+    } catch (e) {
+      debugPrint('NotificationService: Error showing auto-start settings: $e');
+      return false;
+    }
+  }
+
+  /// Check if manufacturer-specific settings are available
+  Future<bool> isAutoStartAvailable() async {
+    try {
+      final available = await DisableBatteryOptimization.isAutoStartEnabled;
+      return available ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Show all battery optimization dialogs needed
+  Future<void> showAllBatteryOptimizationDialogs() async {
+    try {
+      await DisableBatteryOptimization.showDisableAllOptimizationsSettings(
+        "Enable Background Activity",
+        "To receive medication reminders on time, please disable battery optimization for this app.",
+        "Open Settings",
+        "Cancel",
+      );
+    } catch (e) {
+      debugPrint('NotificationService: Error showing optimization dialogs: $e');
+    }
+  }
+
+  // ============ NOTIFICATION METHODS ============
+
+  /// Show an immediate notification - this should always work
   Future<void> showTestNotification() async {
     if (!_initialized) await init();
     
@@ -152,7 +217,7 @@ class NotificationService {
     }
   }
 
-  // Schedule a test notification for 10 seconds from now
+  /// Schedule a test notification for 10 seconds from now
   Future<void> scheduleTestNotification() async {
     if (!_initialized) await init();
     
@@ -191,7 +256,7 @@ class NotificationService {
         'This was scheduled 10 seconds ago!',
         scheduledTime,
         details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
       
@@ -202,7 +267,7 @@ class NotificationService {
     }
   }
 
-  // Schedule a medication reminder
+  /// Schedule a medication reminder
   Future<bool> scheduleMedicationReminder({
     required int id,
     required String medicationName,
@@ -255,7 +320,7 @@ class NotificationService {
         'Take $dosage now',
         scheduledDateTime,
         details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
         payload: 'medication_$id',

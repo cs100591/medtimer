@@ -45,15 +45,38 @@ class ApiService {
         headers,
       });
 
-      const data = await response.json();
+      // 检查响应内容类型
+      const contentType = response.headers.get('content-type');
+      let data: any = null;
+
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const text = await response.text();
+          data = text ? JSON.parse(text) : null;
+        } catch (parseError) {
+          // JSON解析失败
+          return { error: 'Invalid response format' };
+        }
+      } else if (response.status === 204 || response.status === 201) {
+        // 无内容响应（如DELETE成功）
+        data = null;
+      } else {
+        // 非JSON响应
+        const text = await response.text();
+        return { error: text || 'Request failed' };
+      }
 
       if (!response.ok) {
-        return { error: data.message || 'Request failed' };
+        return { error: data?.message || data?.error?.message || 'Request failed' };
       }
 
       return { data };
     } catch (error) {
-      return { error: 'Network error' };
+      // 网络错误或其他错误
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return { error: 'Network error: Unable to connect to server' };
+      }
+      return { error: error instanceof Error ? error.message : 'Network error' };
     }
   }
 

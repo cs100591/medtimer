@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../services/notification_service.dart';
@@ -17,22 +18,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _notificationsEnabled = true;
   bool _saved = false;
   int _scheduledNotificationsCount = 0;
+  bool _batteryOptimizationDisabled = false;
 
   @override
   void initState() {
     super.initState();
     _loadNotificationSetting();
     _loadScheduledNotificationsCount();
+    _checkBatteryOptimization();
   }
 
   Future<void> _loadNotificationSetting() async {
     final enabled = await NotificationService().areNotificationsEnabled();
-    setState(() => _notificationsEnabled = enabled);
+    if (mounted) setState(() => _notificationsEnabled = enabled);
   }
 
   Future<void> _loadScheduledNotificationsCount() async {
     final pending = await NotificationService().getPendingNotifications();
-    setState(() => _scheduledNotificationsCount = pending.length);
+    if (mounted) setState(() => _scheduledNotificationsCount = pending.length);
+  }
+
+  Future<void> _checkBatteryOptimization() async {
+    final disabled = await NotificationService().isBatteryOptimizationDisabled();
+    if (mounted) setState(() => _batteryOptimizationDisabled = disabled);
   }
 
   void _showSaved() {
@@ -46,7 +54,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final settingsNotifier = ref.read(settingsProvider.notifier);
-    final user = ref.watch(currentUserProvider);
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
@@ -64,20 +73,79 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF32D74B).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.check, color: Color(0xFF32D74B), size: 20),
+                  Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 20),
                   SizedBox(width: 8),
                   Text(
                     'Settings saved',
                     style: TextStyle(
-                      color: Color(0xFF32D74B),
+                      color: Color(0xFF4CAF50),
                       fontWeight: FontWeight.w600,
                     ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Battery Optimization Info (non-warning style)
+          if (!_batteryOptimizationDisabled)
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE0E0E0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Color(0xFF757575), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Optimize Notification Delivery',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF424242),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'For reliable medication reminders, consider disabling battery optimization for this app.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF757575),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            await NotificationService().showAllBatteryOptimizationDialogs();
+                            await Future.delayed(const Duration(milliseconds: 500));
+                            await _checkBatteryOptimization();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF007AFF),
+                            side: const BorderSide(color: Color(0xFF007AFF)),
+                          ),
+                          child: const Text('Configure'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -89,7 +157,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             children: [
               _buildListItem(
                 title: 'Language',
-                subtitle: 'Select your language',
+                subtitle: 'Select your preferred language',
                 trailing: _buildSegmentedControl(
                   value: settings.language.code,
                   options: const {'en': 'EN', 'zh': '中文'},
@@ -106,14 +174,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const Divider(height: 1),
               _buildListItem(
                 title: 'Font Size',
-                subtitle: 'Adjust text size',
+                subtitle: 'Adjust text size for readability',
                 trailing: DropdownButton<FontSizeOption>(
                   value: settings.fontSize,
                   underline: const SizedBox(),
                   items: FontSizeOption.values.map((size) {
                     return DropdownMenuItem(
                       value: size,
-                      child: Text(size.label),
+                      child: Text(size.name),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -127,7 +195,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const Divider(height: 1),
               _buildSwitchItem(
                 title: 'High Contrast',
-                subtitle: 'Increase visibility',
+                subtitle: 'Improve visibility with higher contrast',
                 value: settings.highContrast,
                 onChanged: (value) {
                   settingsNotifier.setHighContrast(value);
@@ -143,7 +211,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             title: 'Notifications',
             children: [
               _buildSwitchItem(
-                title: 'Push Notifications',
+                title: 'Enable Notifications',
                 subtitle: 'Receive medication reminders',
                 value: _notificationsEnabled,
                 onChanged: (value) async {
@@ -155,42 +223,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               const Divider(height: 1),
               _buildListItem(
+                title: 'Battery Optimization',
+                subtitle: _batteryOptimizationDisabled
+                    ? '✓ Disabled (recommended)'
+                    : 'Enabled - tap to configure',
+                trailing: TextButton(
+                  onPressed: () async {
+                    await NotificationService().showAllBatteryOptimizationDialogs();
+                    await Future.delayed(const Duration(milliseconds: 500));
+                    await _checkBatteryOptimization();
+                  },
+                  child: const Text('Configure'),
+                ),
+              ),
+              const Divider(height: 1),
+              _buildListItem(
                 title: 'Scheduled Reminders',
-                subtitle: '$_scheduledNotificationsCount notifications scheduled',
+                subtitle: '$_scheduledNotificationsCount active',
                 trailing: TextButton(
                   onPressed: () async {
                     await _loadScheduledNotificationsCount();
-                    if (mounted) {
-                      final pending = await NotificationService().getPendingNotifications();
-                      if (mounted) {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Scheduled Notifications'),
-                            content: SizedBox(
-                              width: double.maxFinite,
-                              height: 300,
-                              child: pending.isEmpty
-                                  ? const Center(child: Text('No notifications scheduled'))
-                                  : ListView.builder(
-                                      itemCount: pending.length,
-                                      itemBuilder: (_, i) => ListTile(
-                                        leading: const Icon(Icons.notifications),
-                                        title: Text(pending[i].title ?? 'Reminder'),
-                                        subtitle: Text(pending[i].body ?? ''),
-                                      ),
-                                    ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: const Text('Close'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    }
+                    if (!mounted) return;
+                    final pending = await NotificationService().getPendingNotifications();
+                    if (!mounted) return;
+                    _showPendingNotificationsDialog(pending);
                   },
                   child: const Text('View'),
                 ),
@@ -201,12 +257,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 subtitle: 'Send a test notification now',
                 trailing: TextButton(
                   onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
                     await NotificationService().showTestNotification();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Test notification sent!')),
-                      );
-                    }
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Test notification sent')),
+                    );
                   },
                   child: const Text('Test'),
                 ),
@@ -217,17 +272,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 subtitle: 'Schedule notification in 10 seconds',
                 trailing: TextButton(
                   onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
                     await NotificationService().scheduleTestNotification();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Notification scheduled for 10 seconds from now!'),
-                          duration: Duration(seconds: 3),
-                        ),
-                      );
-                      // Refresh the count
-                      await _loadScheduledNotificationsCount();
-                    }
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Test notification scheduled for 10 seconds'),
+                      ),
+                    );
+                    await _loadScheduledNotificationsCount();
                   },
                   child: const Text('Schedule'),
                 ),
@@ -247,7 +299,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               const Divider(height: 1),
               _buildButtonItem(
-                icon: Icons.delete_forever,
+                icon: Icons.delete_outline,
                 title: 'Delete All Data',
                 isDestructive: true,
                 onTap: _confirmDeleteData,
@@ -269,16 +321,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF007AFF),
-                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFFE3F2FD),
+                          borderRadius: BorderRadius.circular(24),
                         ),
                         child: Center(
                           child: Text(
-                            user.firstName?.substring(0, 1).toUpperCase() ?? 'U',
+                            user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
                             style: const TextStyle(
-                              color: Colors.white,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
+                              color: Color(0xFF1976D2),
                             ),
                           ),
                         ),
@@ -331,7 +383,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF007AFF),
+                        color: const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Center(
@@ -343,7 +395,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'MedCare',
+                          'Medication Reminder',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
@@ -364,7 +416,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Text(
-                  'Your personal medication reminder companion. Secure, private, and reliable.',
+                  'Your health data is stored securely on your device.',
                   style: TextStyle(
                     color: Color(0xFF8E8E93),
                     fontSize: 14,
@@ -477,7 +529,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF007AFF),
+            activeTrackColor: const Color(0xFF007AFF),
           ),
         ],
       ),
@@ -490,7 +542,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
-    final color = isDestructive ? const Color(0xFFFF3B30) : const Color(0xFF007AFF);
+    final color = isDestructive ? const Color(0xFF007AFF) : const Color(0xFF007AFF);
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -549,6 +601,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  void _showPendingNotificationsDialog(List<PendingNotificationRequest> pending) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Scheduled Notifications'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: pending.isEmpty
+              ? const Text('No scheduled notifications')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: pending.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(pending[index].title ?? 'Notification'),
+                      subtitle: Text(pending[index].body ?? ''),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _exportData() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('📥 Exporting data...')),
@@ -560,7 +642,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete All Data'),
-        content: const Text('This action cannot be undone. All your medications and history will be deleted.'),
+        content: const Text(
+          'This action cannot be undone. All your medication history and data will be deleted.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -578,7 +662,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007AFF),
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -602,7 +689,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Navigator.pop(ctx);
               ref.read(authProvider.notifier).logout();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF007AFF)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007AFF),
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Logout'),
           ),
         ],

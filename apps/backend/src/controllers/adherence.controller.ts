@@ -1,22 +1,33 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { AdherenceStatus } from '../types/shared-types';
 import { adherenceService } from '../services/adherence.service';
-import { logger } from '../utils/logger';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { ValidationError } from '../middleware/error.middleware';
+
+// 安全的数字解析辅助函数
+function safeParseIntOptional(value: any, defaultValue: number): number {
+  if (value === undefined || value === null || value === '') {
+    return defaultValue;
+  }
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
 
 export class AdherenceController {
-  async logAdherence(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async logAdherence(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { scheduleId, scheduledTime, status, notes, location, method } = req.body;
 
       if (!scheduleId || !scheduledTime || !status) {
-        res.status(400).json({ error: 'scheduleId, scheduledTime, and status are required' });
-        return;
+        throw new ValidationError('scheduleId, scheduledTime, and status are required');
       }
 
       if (!Object.values(AdherenceStatus).includes(status)) {
-        res.status(400).json({ error: 'Invalid status value' });
-        return;
+        throw new ValidationError('Invalid status value');
       }
 
       const record = await adherenceService.logAdherence(userId, {
@@ -37,14 +48,16 @@ export class AdherenceController {
     }
   }
 
-  async markTaken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async markTaken(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { scheduleId, scheduledTime, notes, location } = req.body;
 
       if (!scheduleId || !scheduledTime) {
-        res.status(400).json({ error: 'scheduleId and scheduledTime are required' });
-        return;
+        throw new ValidationError('scheduleId and scheduledTime are required');
       }
 
       const record = await adherenceService.logAdherence(userId, {
@@ -66,14 +79,16 @@ export class AdherenceController {
   }
 
 
-  async markSkipped(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async markSkipped(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { scheduleId, scheduledTime, reason } = req.body;
 
       if (!scheduleId || !scheduledTime) {
-        res.status(400).json({ error: 'scheduleId and scheduledTime are required' });
-        return;
+        throw new ValidationError('scheduleId and scheduledTime are required');
       }
 
       const record = await adherenceService.logAdherence(userId, {
@@ -93,14 +108,16 @@ export class AdherenceController {
     }
   }
 
-  async snooze(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async snooze(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { scheduleId, scheduledTime, snoozeMinutes, notes } = req.body;
 
       if (!scheduleId || !scheduledTime || !snoozeMinutes) {
-        res.status(400).json({ error: 'scheduleId, scheduledTime, and snoozeMinutes are required' });
-        return;
+        throw new ValidationError('scheduleId, scheduledTime, and snoozeMinutes are required');
       }
 
       const record = await adherenceService.snoozeReminder(userId, {
@@ -119,9 +136,12 @@ export class AdherenceController {
     }
   }
 
-  async getHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getHistory(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { medicationId, scheduleId, status, startDate, endDate } = req.query;
 
       const records = await adherenceService.getAdherenceHistory(userId, {
@@ -141,9 +161,12 @@ export class AdherenceController {
     }
   }
 
-  async getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getStats(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { startDate, endDate } = req.query;
 
       const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -157,9 +180,12 @@ export class AdherenceController {
     }
   }
 
-  async getReport(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getReport(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { startDate, endDate } = req.query;
 
       const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -173,9 +199,12 @@ export class AdherenceController {
     }
   }
 
-  async getPending(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getPending(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const records = await adherenceService.getPendingReminders(userId);
 
       res.status(200).json({
@@ -187,11 +216,14 @@ export class AdherenceController {
     }
   }
 
-  async getUpcoming(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getUpcoming(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { hours } = req.query;
-      const hoursAhead = hours ? parseInt(hours as string, 10) : 24;
+      const hoursAhead = safeParseIntOptional(hours, 24);
 
       const records = await adherenceService.getUpcomingReminders(userId, hoursAhead);
 
@@ -204,9 +236,12 @@ export class AdherenceController {
     }
   }
 
-  async exportCSV(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async exportCSV(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new ValidationError('User authentication required');
+      }
       const { startDate, endDate } = req.query;
 
       const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
