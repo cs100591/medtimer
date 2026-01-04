@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess, setLoading } from '../store/authSlice';
 import api from '../services/api';
 import { useTranslation } from '../i18n/TranslationContext';
+import { Logo } from '../components/Logo';
 
 export function LoginPage() {
   const navigate = useNavigate();

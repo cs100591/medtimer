@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/authSlice';
 import type { RootState } from '../../store';
 import { useTranslation } from '../../i18n/TranslationContext';
+import { LogoIcon } from '../Logo';
 
 export function Navbar() {
   const location = useLocation();
@@ -32,9 +33,7 @@ export function Navbar() {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="relative w-10 h-10 flex items-center justify-center bg-gradient-to-tr from-primary-600 to-primary-400 rounded-xl shadow-lg shadow-primary-500/20 group-hover:shadow-primary-500/30 transition-all duration-300">
-                <span className="text-xl text-white transform group-hover:scale-110 transition-transform">💊</span>
-              </div>
+              <LogoIcon size={40} className="group-hover:scale-105 transition-transform duration-300" />
               <div>
                 <span className="font-bold text-xl text-slate-800 tracking-tight">
                   MedTimer
@@ -106,9 +105,7 @@ export function Navbar() {
       <nav className="sm:hidden glass-nav sticky top-0 z-50">
         <div className="px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-tr from-primary-600 to-primary-400 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20">
-              <span className="text-lg">💊</span>
-            </div>
+            <LogoIcon size={36} />
             <span className="font-bold text-lg text-slate-800">
               MedTimer
             </span>

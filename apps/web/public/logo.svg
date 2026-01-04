@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Glass gradient background -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0284c7;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Glass shine effect -->
+    <linearGradient id="glassShine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.4" />
+      <stop offset="50%" style="stop-color:#ffffff;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+    </linearGradient>
+    
+    <!-- Pill gradient -->
+    <linearGradient id="pillTop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0f2fe;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="pillBottom" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0369a1" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Inner glow for glass -->
+    <filter id="innerGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  
+  <!-- Background rounded square with glass effect -->
+  <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="url(#bgGradient)" filter="url(#shadow)"/>
+  
+  <!-- Glass shine overlay -->
+  <rect x="32" y="32" width="448" height="224" rx="96" ry="96" fill="url(#glassShine)"/>
+  
+  <!-- Glass border highlight -->
+  <rect x="36" y="36" width="440" height="440" rx="92" ry="92" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  
+  <!-- Pill capsule - rotated 45 degrees -->
+  <g transform="translate(256, 256) rotate(-45) translate(-256, -256)">
+    <!-- Pill shadow -->
+    <ellipse cx="260" cy="268" rx="60" ry="120" fill="rgba(0,0,0,0.15)"/>
+    
+    <!-- Pill body - bottom half (yellow/orange) -->
+    <path d="M196 256 L196 316 Q196 376 256 376 Q316 376 316 316 L316 256 Z" fill="url(#pillBottom)"/>
+    
+    <!-- Pill body - top half (white) -->
+    <path d="M196 256 L196 196 Q196 136 256 136 Q316 136 316 196 L316 256 Z" fill="url(#pillTop)"/>
+    
+    <!-- Pill shine -->
+    <ellipse cx="230" cy="200" rx="20" ry="40" fill="rgba(255,255,255,0.6)"/>
+    
+    <!-- Pill divider line -->
+    <line x1="196" y1="256" x2="316" y2="256" stroke="rgba(0,0,0,0.1)" stroke-width="2"/>
+  </g>
+  
+  <!-- Clock indicator (timer element) -->
+  <circle cx="380" cy="380" r="48" fill="white" filter="url(#shadow)"/>
+  <circle cx="380" cy="380" r="44" fill="none" stroke="#0ea5e9" stroke-width="4"/>
+  <line x1="380" y1="380" x2="380" y2="352" stroke="#0f172a" stroke-width="4" stroke-linecap="round"/>
+  <line x1="380" y1="380" x2="400" y2="380" stroke="#0f172a" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="380" cy="380" r="4" fill="#0f172a"/>
+</svg>
