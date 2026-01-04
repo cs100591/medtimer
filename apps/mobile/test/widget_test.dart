@@ -1,4 +1,4 @@
-// Basic Flutter widget test for Medication Reminder app
+// Basic Flutter widget test for MedTimer app
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,11 +9,11 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: Center(child: Text('Medication Reminder')),
+          body: Center(child: Text('MedTimer')),
         ),
       ),
     );
 
-    expect(find.text('Medication Reminder'), findsOneWidget);
+    expect(find.text('MedTimer'), findsOneWidget);
   });
 }

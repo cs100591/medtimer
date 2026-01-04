@@ -33,7 +33,7 @@ class MedicationReminderApp extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     
     return MaterialApp(
-      title: 'Medication Reminder',
+      title: 'MedTimer',
       debugShowCheckedModeBanner: false,
       theme: settings.highContrast
           ? AppTheme.highContrastTheme(fontScale: settings.fontSize.scale)

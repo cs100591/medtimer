@@ -338,7 +338,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Medication Reminder',
+                          'MedTimer',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,

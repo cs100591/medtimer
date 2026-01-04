@@ -101,7 +101,7 @@ class _CaregiverPageState extends ConsumerState<CaregiverPage> {
     setState(() {
       _showInviteModal = true;
       _inviteCode = _generateInviteCode();
-      _inviteLink = 'https://medcare.app/invite/$_inviteCode';
+      _inviteLink = 'https://medtimer.app/invite/$_inviteCode';
       _nameController.clear();
       _emailController.clear();
       _permissionLevel = 'view';

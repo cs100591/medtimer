@@ -117,7 +117,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   
                   // Title
                   const Text(
-                    'MedCare',
+                    'MedTimer',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w600,

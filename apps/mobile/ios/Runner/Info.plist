@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>MedCare</string>
+	<string>MedTimer</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>medication_reminder</string>
+	<string>MedTimer</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -53,9 +53,9 @@
 	</array>
 	<!-- Camera Permission for Barcode Scanner -->
 	<key>NSCameraUsageDescription</key>
-	<string>MedCare needs camera access to scan medication barcodes for quick entry.</string>
+	<string>MedTimer needs camera access to scan medication barcodes for quick entry.</string>
 	<!-- Photo Library Permission -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>MedCare needs photo library access to save medication images.</string>
+	<string>MedTimer needs photo library access to save medication images.</string>
 </dict>
 </plist>

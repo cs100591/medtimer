@@ -1,6 +1,6 @@
 // App-wide constants
 class AppConstants {
-  static const String appName = 'Medication Reminder';
+  static const String appName = 'MedTimer';
   
   // API URL - Production URL (deployed backend)
   // TODO: Replace with your deployed backend URL

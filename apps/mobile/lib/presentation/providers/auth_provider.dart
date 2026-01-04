@@ -232,7 +232,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     
     final anonymousUser = UserModel(
       id: userId,
-      email: 'guest@medcare.local',
+      email: 'guest@medtimer.local',
       firstName: 'Guest',
       lastName: 'User',
       createdAt: DateTime.now(),

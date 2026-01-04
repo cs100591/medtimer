@@ -111,7 +111,7 @@ class _ProfileSetupDialogState extends State<ProfileSetupDialog> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Welcome to MedCare!',
+                  'Welcome to MedTimer!',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
