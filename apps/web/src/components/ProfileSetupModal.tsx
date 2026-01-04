@@ -8,7 +8,7 @@ interface ProfileSetupModalProps {
 export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
   const { lang } = useTranslation();
   const isZh = lang === 'zh';
-  
+
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('male');
   const [height, setHeight] = useState('');
@@ -17,7 +17,7 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const ageNum = parseInt(age);
     if (!age || isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
       alert(isZh ? '请输入有效年龄 (1-120)' : 'Please enter a valid age (1-120)');
@@ -35,16 +35,16 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
         weight: weight ? parseFloat(weight) : null,
         createdAt: new Date().toISOString(),
       };
-      
+
       localStorage.setItem('user_profile', JSON.stringify(profile));
       localStorage.setItem('profile_setup_complete', 'true');
-      
+
       // Create anonymous local user
       const userId = `user-${Date.now()}`;
       localStorage.setItem('user_id', userId);
       localStorage.setItem('user_token', `local_token_${Date.now()}`);
       localStorage.setItem('is_anonymous_user', 'true');
-      
+
       onComplete();
     } catch (error) {
       alert(isZh ? '保存失败，请重试' : 'Failed to save. Please try again.');
@@ -81,7 +81,7 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
                 type="number"
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
-                className="input pl-12"
+                className="input !pl-14"
                 placeholder={isZh ? '输入您的年龄' : 'Enter your age'}
                 min="1"
                 max="120"
@@ -134,7 +134,7 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
                 type="number"
                 value={height}
                 onChange={(e) => setHeight(e.target.value)}
-                className="input pl-12"
+                className="input !pl-14"
                 placeholder={isZh ? '输入您的身高' : 'Enter your height'}
                 step="0.1"
               />
@@ -153,7 +153,7 @@ export function ProfileSetupModal({ onComplete }: ProfileSetupModalProps) {
                 type="number"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
-                className="input pl-12"
+                className="input !pl-14"
                 placeholder={isZh ? '输入您的体重' : 'Enter your weight'}
                 step="0.1"
               />
