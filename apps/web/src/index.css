@@ -86,12 +86,52 @@
     @apply btn bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300;
   }
   
+  .btn-danger {
+    @apply btn bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300;
+  }
+  
   .btn-ghost {
     @apply btn bg-transparent text-slate-600 hover:bg-slate-100;
   }
 
   .input {
     @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm;
+  }
+  
+  .card {
+    @apply bg-white rounded-2xl shadow-soft-md border border-slate-100 overflow-hidden;
+  }
+  
+  .card-elevated {
+    @apply bg-white rounded-2xl shadow-soft-lg border border-slate-100;
+  }
+  
+  .list-group {
+    @apply divide-y divide-slate-100;
+  }
+  
+  .list-item {
+    @apply flex items-center px-5 py-4;
+  }
+  
+  .segmented-control {
+    @apply inline-flex p-1 bg-slate-100 rounded-xl;
+  }
+  
+  .segmented-item {
+    @apply px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 text-slate-500;
+  }
+  
+  .segmented-item.active {
+    @apply bg-white text-primary-600 shadow-sm;
+  }
+  
+  .segmented-item:not(.active):hover {
+    @apply text-slate-700;
+  }
+  
+  .glass-nav {
+    @apply bg-white/80 backdrop-blur-md border-b border-slate-200/50;
   }
 }
 
