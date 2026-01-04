@@ -159,35 +159,62 @@ export function HomePage() {
   const progressColor = progress >= 80 ? 'var(--success)' : progress >= 50 ? 'var(--warning)' : 'var(--primary)';
 
   return (
-    <div className="max-w-2xl mx-auto px-4">
+    <div className="max-w-3xl mx-auto px-4 pb-24">
       {/* Header */}
-      <div className="mb-6">
-        <p className="text-sm font-medium text-[var(--primary)] mb-1">{dateStr}</p>
-        <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{isZh ? '今日提醒' : "Today's Reminders"}</h1>
-      </div>
-
-      {/* Progress Card - iOS Style */}
-      <div className="card-elevated p-5 mb-6">
+      <header className="mb-8 pt-2">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[var(--text-secondary)] text-sm font-medium mb-1">{t('todaysProgress')}</p>
-            <p className="text-4xl font-bold text-[var(--text-primary)] font-mono">{completed}<span className="text-[var(--text-tertiary)]">/{total}</span></p>
-            <p className="text-[var(--text-secondary)] text-sm mt-1">{isZh ? '剂药物已服用' : 'doses taken'}</p>
-            {completed === total && total > 0 && (
-              <div className="mt-3 pill pill-success">
-                <span className="mr-1">🎉</span>
-                {isZh ? '全部完成！' : 'All done!'}
+            <p className="text-sm font-semibold text-primary-600 mb-1 uppercase tracking-wider">{dateStr}</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{isZh ? '今日提醒' : "Today's Reminders"}</h1>
+          </div>
+          <div className="w-12 h-12 bg-white rounded-2xl shadow-soft-md flex items-center justify-center border border-slate-100">
+            <span className="text-2xl">📅</span>
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Card - Premium Glass Style */}
+      <div className="glass-card p-6 mb-8 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-100/50 rounded-full blur-3xl -z-10 -translate-y-1/2 translate-x-1/2" />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-baseline gap-2 mb-2">
+              <h2 className="text-5xl font-bold text-slate-900 font-mono tracking-tighter">
+                {completed}
+                <span className="text-2xl text-slate-400 font-normal">/{total}</span>
+              </h2>
+            </div>
+            <p className="text-slate-500 font-medium">{isZh ? '剂药物已服用' : 'Doses taken today'}</p>
+
+            {completed === total && total > 0 ? (
+              <div className="mt-4 px-4 py-2 bg-green-50 text-green-700 rounded-xl inline-flex items-center gap-2 font-semibold shadow-sm border border-green-100">
+                <span>🎉</span>
+                {isZh ? '全部完成！' : 'All caught up!'}
+              </div>
+            ) : (
+              <div className="mt-4 px-4 py-2 bg-blue-50 text-primary-700 rounded-xl inline-flex items-center gap-2 font-semibold shadow-sm border border-blue-100">
+                <span>💪</span>
+                {isZh ? '继续保持！' : 'Keep going!'}
               </div>
             )}
           </div>
-          <div className="relative w-24 h-24">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" strokeWidth="8" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke={progressColor} strokeWidth="8" 
-                strokeDasharray={`${progress * 2.64} 264`} strokeLinecap="round" className="progress-ring" />
+
+          <div className="relative w-32 h-32">
+            <svg className="w-full h-full transform -rotate-90 drop-shadow-lg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+              <circle
+                cx="50" cy="50" r="42"
+                fill="none"
+                stroke={progressColor}
+                strokeWidth="8"
+                strokeDasharray={`${progress * 2.64} 264`}
+                strokeLinecap="round"
+                className="progress-ring"
+              />
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl font-bold font-mono" style={{ color: progressColor }}>{progress}%</span>
+            <div className="absolute inset-0 flex items-center justify-center flex-col">
+              <span className="text-2xl font-bold text-slate-900">{progress}%</span>
             </div>
           </div>
         </div>
@@ -195,42 +222,45 @@ export function HomePage() {
 
       {/* Snooze Toast */}
       {snoozeId && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-[var(--warning)] text-white px-6 py-3 rounded-[var(--radius-lg)] shadow-lg flex items-center gap-2 z-50">
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-50 animate-scale-in">
           <span className="text-xl">😴</span>
           <span className="font-medium">{t('snoozed')}</span>
         </div>
       )}
 
       {loading && (
-        <div className="flex items-center justify-center py-8">
-          <div className="w-8 h-8 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
+        <div className="flex items-center justify-center py-12">
+          <div className="w-10 h-10 border-4 border-slate-200 border-t-primary-500 rounded-full animate-spin" />
         </div>
       )}
 
       {/* Empty State */}
       {total === 0 && !loading && (
-        <div className="card p-8 text-center">
-          <div className="w-20 h-20 bg-[rgba(0,122,255,0.1)] rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-4xl">💊</span>
+        <div className="glass-card p-10 text-center border-dashed border-2 border-slate-200">
+          <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-5xl">💊</span>
           </div>
-          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{t('noMedicationsToday')}</h3>
-          <p className="text-[var(--text-secondary)] text-sm">{t('addMedicationsHint')}</p>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">{t('noMedicationsToday')}</h3>
+          <p className="text-slate-500">{t('addMedicationsHint')}</p>
         </div>
       )}
 
       {/* Pending Reminders */}
       {pendingGroups.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-base font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 bg-[var(--primary)] rounded-full animate-pulse" />
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-3">
+            <span className="flex h-3 w-3 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary-500"></span>
+            </span>
             {t('upcomingReminders')}
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-4 animate-enter-staggered">
             {pendingGroups.map((group) => (
-              <TimeGroupCard 
-                key={group.time} 
-                group={group} 
-                isExpanded={expandedGroups.has(group.time)}
+              <TimeGroupCard
+                key={group.time}
+                group={group}
+                isExpanded={expandedGroups.has(group.time) || pendingGroups.length === 1}
                 onToggle={() => toggleGroup(group.time)}
                 onTake={handleTake}
                 onSkip={handleSkip}
@@ -246,16 +276,16 @@ export function HomePage() {
 
       {/* Completed Reminders */}
       {completedGroups.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-base font-semibold text-[var(--success)] mb-3 flex items-center gap-2">
-            <span>✓</span>
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-slate-400 mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-400" />
             {t('completed')}
           </h2>
-          <div className="space-y-3 opacity-70">
+          <div className="space-y-4 opacity-60 hover:opacity-100 transition-opacity duration-300">
             {completedGroups.map((group) => (
-              <TimeGroupCard 
-                key={group.time} 
-                group={group} 
+              <TimeGroupCard
+                key={group.time}
+                group={group}
                 isExpanded={expandedGroups.has(group.time)}
                 onToggle={() => toggleGroup(group.time)}
                 isPending={false}
@@ -269,8 +299,8 @@ export function HomePage() {
 
       {/* Reset Button */}
       {completed > 0 && (
-        <div className="text-center pb-4">
-          <button onClick={handleReset} className="btn-ghost text-sm">
+        <div className="text-center pb-8">
+          <button onClick={handleReset} className="btn-ghost text-sm text-slate-400 hover:text-slate-600">
             {t('resetReminders')}
           </button>
         </div>
@@ -291,47 +321,55 @@ function TimeGroupCard({ group, isExpanded, onToggle, onTake, onSkip, onSnooze, 
   t: (key: string) => string;
 }) {
   const allCompleted = group.reminders.every(r => r.status === 'completed');
-  
+
   return (
-    <div className={`card overflow-hidden transition-all duration-200 ${isExpanded ? 'shadow-md' : ''}`}>
-      <button onClick={onToggle} className="w-full px-4 py-4 flex items-center justify-between hover:bg-[var(--surface-secondary)] transition-colors">
-        <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-[var(--radius-md)] flex items-center justify-center ${allCompleted ? 'bg-[rgba(50,215,75,0.12)]' : 'bg-[rgba(0,122,255,0.12)]'}`}>
-            <span className="text-2xl">{allCompleted ? '✅' : '⏰'}</span>
+    <div className={`glass-card overflow-hidden transition-all duration-300 transform ${isExpanded ? 'scale-[1.01] shadow-soft-lg ring-1 ring-primary-50' : 'hover:scale-[1.01]'}`}>
+      <button onClick={onToggle} className="w-full px-5 py-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+        <div className="flex items-center gap-5">
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${allCompleted ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-primary-600'}`}>
+            <span className="text-2xl font-mono font-bold tracking-tight">{group.time.replace(/\s*[AP]M/, '')}</span>
           </div>
           <div className="text-left">
-            <p className="font-semibold text-[var(--text-primary)] text-lg font-mono">{group.time}</p>
-            <p className="text-sm text-[var(--text-secondary)]">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${allCompleted ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-primary-700'}`}>
+                {group.time.includes('AM') ? 'Morning' : 'Evening'}
+              </span>
+            </div>
+            <p className="text-slate-500 font-medium">
               {group.reminders.length} {group.reminders.length > 1 ? t('medicationsPlural') : t('medication')}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex -space-x-2">
-            {group.reminders.slice(0, 3).map((r) => (
-              <div key={r.id} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 border-[var(--surface)] ${
-                r.status === 'completed' ? 'bg-[var(--success)] text-white' : 'bg-[var(--primary)] text-white'
-              }`}>
-                {r.medicationName.charAt(0)}
-              </div>
-            ))}
-            {group.reminders.length > 3 && (
-              <div className="w-8 h-8 rounded-full bg-[var(--surface-secondary)] flex items-center justify-center text-xs font-semibold border-2 border-[var(--surface)]">
-                +{group.reminders.length - 3}
-              </div>
-            )}
+
+        <div className="flex items-center gap-4">
+          {!isExpanded && (
+            <div className="flex -space-x-3">
+              {group.reminders.slice(0, 3).map((r) => (
+                <div key={r.id} className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm transform transition-transform hover:translate-y-[-2px] ${r.status === 'completed' ? 'bg-green-500 text-white' : 'bg-white text-slate-700'
+                  }`}>
+                  {r.medicationName.charAt(0)}
+                </div>
+              ))}
+              {group.reminders.length > 3 && (
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold border-2 border-white text-slate-500">
+                  +{group.reminders.length - 3}
+                </div>
+              )}
+            </div>
+          )}
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-all duration-300 ${isExpanded ? 'rotate-180 bg-slate-100' : ''}`}>
+            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </div>
-          <svg className={`w-5 h-5 text-[var(--text-tertiary)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
         </div>
       </button>
-      
+
       {isExpanded && (
-        <div className="border-t border-[var(--divider)] px-4 py-3 space-y-3 bg-[var(--surface-secondary)]">
+        <div className="border-t border-slate-100 p-5 space-y-4 bg-slate-50/50">
           {group.reminders.map((reminder) => (
-            <MedicationItem 
-              key={reminder.id} 
+            <MedicationItem
+              key={reminder.id}
               reminder={reminder}
               onTake={isPending && onTake ? () => onTake(reminder.id) : undefined}
               onSkip={isPending && onSkip ? () => onSkip(reminder.id) : undefined}
@@ -355,35 +393,39 @@ function MedicationItem({ reminder, onTake, onSkip, onSnooze, isZh, t }: {
   t: (key: string) => string;
 }) {
   const isCompleted = reminder.status === 'completed';
-  
+
   return (
-    <div className={`bg-[var(--surface)] rounded-[var(--radius-md)] p-4 ${isCompleted ? 'opacity-60' : ''}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-[var(--radius-sm)] flex items-center justify-center ${isCompleted ? 'bg-[rgba(50,215,75,0.12)]' : 'bg-[rgba(0,122,255,0.12)]'}`}>
-            <span className="text-xl">💊</span>
+    <div className={`bg-white rounded-2xl p-5 shadow-sm border border-slate-100 transition-all hover:shadow-md ${isCompleted ? 'opacity-70 bg-slate-50' : ''}`}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${isCompleted ? 'bg-green-100' : 'bg-primary-50'}`}>
+            💊
           </div>
           <div>
-            <p className="font-semibold text-[var(--text-primary)]">{reminder.medicationName}</p>
-            <p className="text-sm text-[var(--text-secondary)]">{reminder.dosage}</p>
+            <h3 className="font-bold text-slate-900 text-lg leading-tight">{reminder.medicationName}</h3>
+            <p className="text-slate-500 font-medium">{reminder.dosage}</p>
           </div>
         </div>
         {isCompleted && (
-          <span className="pill pill-success">✓ {isZh ? '已服用' : 'Taken'}</span>
+          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide">
+            {isZh ? '已服用' : 'Taken'}
+          </span>
         )}
       </div>
-      
+
       {!isCompleted && onTake && (
-        <div className="flex gap-2">
-          <button onClick={onTake} className="btn-success flex-1 py-2.5">
-            ✓ {t('takeDose')}
+        <div className="flex gap-3">
+          <button onClick={onTake} className="btn-primary flex-1 py-3 text-sm font-bold shadow-lg shadow-primary-500/20">
+            {t('takeDose')}
           </button>
-          <button onClick={onSnooze} className="px-4 py-2.5 bg-[rgba(255,149,0,0.12)] hover:bg-[rgba(255,149,0,0.2)] text-[var(--warning)] font-medium rounded-[var(--radius-md)] transition-colors">
-            😴
-          </button>
-          <button onClick={onSkip} className="btn-secondary px-4 py-2.5">
-            {t('skip')}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={onSnooze} className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-colors border border-amber-100 shadow-sm" title="Snooze">
+              <span className="text-lg">😴</span>
+            </button>
+            <button onClick={onSkip} className="px-4 py-2 bg-white text-slate-400 rounded-xl hover:bg-slate-50 hover:text-slate-600 transition-colors border border-slate-200" title={t('skip')}>
+              <span className="text-lg">✕</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

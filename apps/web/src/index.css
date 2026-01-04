@@ -3,272 +3,112 @@
 @tailwind utilities;
 
 /* ============================================
-   CLINICAL CLARITY THEME - Professional iOS Style
+   PREMIUM MEDCARE THEME
    ============================================ */
 
 :root {
-  /* Primary Colors - System Blue */
-  --primary: #007AFF;
-  --primary-light: #5AC8FA;
-  --primary-dark: #0056CC;
+  /* Brand Colors - Ocean Blue Gradient Feel */
+  --primary: #0ea5e9;
+  --primary-light: #e0f2fe;
+  --primary-dark: #0369a1;
   
   /* Semantic Colors */
-  --success: #32D74B;
-  --warning: #FF9500;
-  --danger: #FF3B30;
-  --info: #5AC8FA;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
   
   /* Background & Surface */
-  --bg-primary: #F2F2F7;
-  --bg-secondary: #FFFFFF;
-  --surface: #FFFFFF;
-  --surface-secondary: #F2F2F7;
+  --bg-primary: #f8fafc; /* Slate 50 */
+  --bg-secondary: #ffffff;
+  --surface: #ffffff;
+  --surface-secondary: #f1f5f9; /* Slate 100 */
   
   /* Text Colors */
-  --text-primary: #1C1C1E;
-  --text-secondary: #8E8E93;
-  --text-tertiary: #AEAEB2;
+  --text-primary: #0f172a; /* Slate 900 */
+  --text-secondary: #64748b; /* Slate 500 */
+  --text-tertiary: #94a3b8; /* Slate 400 */
   
-  /* Borders & Dividers */
-  --border: rgba(60, 60, 67, 0.12);
-  --divider: rgba(60, 60, 67, 0.08);
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  /* Borders */
+  --border: #e2e8f0; /* Slate 200 */
+  --divider: #f1f5f9; /* Slate 100 */
   
   /* Glass Effect */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.5);
   
-  /* Border Radius - iOS Style */
+  /* Radius & Shadows */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-xl: 24px;
   --radius-full: 9999px;
   
-  /* Typography */
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
-  line-height: 1.5;
-  color: var(--text-primary);
-  background-color: var(--bg-primary);
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.03);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.03);
+  --shadow-lg: 0 12px 24px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.04);
 }
 
-/* Monospace for numbers/timers */
-.font-mono {
-  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-primary);
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    background-image: radial-gradient(circle at 50% 0%, #e0f2fe 0%, transparent 25%), radial-gradient(circle at 100% 0%, #e0e7ff 0%, transparent 25%);
+    background-attachment: fixed;
+  }
 }
 
 /* ============================================
-   LIQUID GLASS NAVIGATION
+   UTILITIES & COMPONENTS
    ============================================ */
 
-.glass-nav {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid var(--glass-border);
-}
+@layer components {
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/50;
+  }
+  
+  .glass-card {
+    @apply glass rounded-2xl shadow-soft-md transition-all duration-300;
+  }
+  
+  .glass-card:hover {
+    @apply shadow-soft-lg translate-y-[-2px] bg-white/90;
+  }
+  
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 font-medium rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply btn bg-primary text-white shadow-lg shadow-blue-500/20 hover:bg-primary-dark hover:shadow-blue-500/30;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300;
+  }
+  
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-600 hover:bg-slate-100;
+  }
 
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  .input {
+    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm;
+  }
 }
 
 /* ============================================
-   CARD STYLES
+   MOBILE NAVIGATION
    ============================================ */
 
-.card {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border);
+.mobile-nav {
+  @apply fixed bottom-0 left-0 right-0 glass z-50 pb-[env(safe-area-inset-bottom)] border-t border-slate-200/50 shadow-[0_-4px_20px_rgba(0,0,0,0.03)];
 }
 
-.card-elevated {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+.mobile-nav-item {
+  @apply flex flex-col items-center justify-center p-2 text-slate-400 transition-colors duration-200;
 }
 
-/* ============================================
-   BUTTON STYLES
-   ============================================ */
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  background: var(--primary);
-  color: white;
-  font-weight: 600;
-  font-size: 16px;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-  transform: scale(1.02);
-}
-
-.btn-primary:active {
-  transform: scale(0.98);
-}
-
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  background: var(--surface-secondary);
-  color: var(--primary);
-  font-weight: 600;
-  font-size: 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background: var(--bg-primary);
-}
-
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 16px;
-  background: transparent;
-  color: var(--primary);
-  font-weight: 500;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-ghost:hover {
-  background: rgba(0, 122, 255, 0.1);
-}
-
-.btn-danger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  background: var(--danger);
-  color: white;
-  font-weight: 600;
-  font-size: 16px;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-danger:hover {
-  background: #E6352B;
-}
-
-.btn-success {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  background: var(--success);
-  color: white;
-  font-weight: 600;
-  font-size: 16px;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-success:hover {
-  background: #2BC840;
-}
-
-/* ============================================
-   INPUT STYLES
-   ============================================ */
-
-.input {
-  width: 100%;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: 16px;
-  color: var(--text-primary);
-  transition: all 0.2s ease;
-  outline: none;
-}
-
-.input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
-}
-
-.input::placeholder {
-  color: var(--text-tertiary);
-}
-
-/* ============================================
-   PILL / BADGE STYLES
-   ============================================ */
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: var(--radius-full);
-}
-
-.pill-primary {
-  background: rgba(0, 122, 255, 0.12);
-  color: var(--primary);
-}
-
-.pill-success {
-  background: rgba(50, 215, 75, 0.12);
-  color: var(--success);
-}
-
-.pill-warning {
-  background: rgba(255, 149, 0, 0.12);
-  color: var(--warning);
-}
-
-.pill-danger {
-  background: rgba(255, 59, 48, 0.12);
-  color: var(--danger);
+.mobile-nav-item.active {
+  @apply text-primary;
 }
 
 /* ============================================
@@ -276,181 +116,34 @@ body {
    ============================================ */
 
 .progress-ring {
-  transition: stroke-dasharray 0.5s ease;
-}
-
-@keyframes progress-fill {
-  from { stroke-dasharray: 0 264; }
-}
-
-.progress-ring-animated {
-  animation: progress-fill 1s ease-out forwards;
+  transition: stroke-dasharray 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ============================================
-   MOBILE BOTTOM NAVIGATION
+   ANIMATIONS
    ============================================ */
 
-@media (max-width: 640px) {
-  .mobile-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-top: 1px solid var(--glass-border);
-    padding: 8px 0;
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
-    z-index: 50;
+.animate-enter {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-enter-staggered > * {
+  opacity: 0;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-enter-staggered > *:nth-child(1) { animation-delay: 0.1s; }
+.animate-enter-staggered > *:nth-child(2) { animation-delay: 0.2s; }
+.animate-enter-staggered > *:nth-child(3) { animation-delay: 0.3s; }
+.animate-enter-staggered > *:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-  
-  .mobile-nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 12px;
-    border-radius: var(--radius-md);
-    transition: all 0.2s ease;
-  }
-  
-  .mobile-nav-item.active {
-    color: var(--primary);
-  }
-  
-  .mobile-nav-item:not(.active) {
-    color: var(--text-secondary);
-  }
-  
-  .mobile-nav-icon {
-    font-size: 24px;
-    margin-bottom: 2px;
-  }
-  
-  .mobile-nav-label {
-    font-size: 10px;
-    font-weight: 500;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-
-/* ============================================
-   SEGMENTED CONTROL (iOS Style)
-   ============================================ */
-
-.segmented-control {
-  display: inline-flex;
-  background: var(--surface-secondary);
-  border-radius: var(--radius-md);
-  padding: 2px;
-}
-
-.segmented-item {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  border-radius: calc(var(--radius-md) - 2px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.segmented-item.active {
-  background: var(--surface);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ============================================
-   LIST STYLES (iOS Style)
-   ============================================ */
-
-.list-group {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.list-item {
-  display: flex;
-  align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--divider);
-}
-
-.list-item:last-child {
-  border-bottom: none;
-}
-
-/* ============================================
-   SCROLLBAR
-   ============================================ */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--text-tertiary);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
-/* ============================================
-   ACCESSIBILITY
-   ============================================ */
-
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ============================================
-   SAFE AREAS
-   ============================================ */
-
-.safe-top {
-  padding-top: env(safe-area-inset-top, 0);
-}
-
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
-}
-
-/* Mobile content padding for bottom nav */
-@media (max-width: 640px) {
-  .content-with-nav {
-    padding-bottom: 100px;
-  }
-}
-
-/* ============================================
-   UTILITY CLASSES
-   ============================================ */
-
-.text-primary { color: var(--text-primary); }
-.text-secondary { color: var(--text-secondary); }
-.text-tertiary { color: var(--text-tertiary); }
-.text-blue { color: var(--primary); }
-.text-green { color: var(--success); }
-.text-orange { color: var(--warning); }
-.text-red { color: var(--danger); }
-
-.bg-primary { background: var(--bg-primary); }
-.bg-surface { background: var(--surface); }
