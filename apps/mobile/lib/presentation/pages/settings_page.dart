@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../services/notification_service.dart';
@@ -17,25 +16,18 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _notificationsEnabled = true;
   bool _saved = false;
-  int _scheduledNotificationsCount = 0;
   bool _batteryOptimizationDisabled = false;
 
   @override
   void initState() {
     super.initState();
     _loadNotificationSetting();
-    _loadScheduledNotificationsCount();
     _checkBatteryOptimization();
   }
 
   Future<void> _loadNotificationSetting() async {
     final enabled = await NotificationService().areNotificationsEnabled();
     if (mounted) setState(() => _notificationsEnabled = enabled);
-  }
-
-  Future<void> _loadScheduledNotificationsCount() async {
-    final pending = await NotificationService().getPendingNotifications();
-    if (mounted) setState(() => _scheduledNotificationsCount = pending.length);
   }
 
   Future<void> _checkBatteryOptimization() async {
@@ -217,7 +209,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 onChanged: (value) async {
                   await NotificationService().setNotificationsEnabled(value);
                   setState(() => _notificationsEnabled = value);
-                  await _loadScheduledNotificationsCount();
                   _showSaved();
                 },
               ),
@@ -234,54 +225,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     await _checkBatteryOptimization();
                   },
                   child: const Text('Configure'),
-                ),
-              ),
-              const Divider(height: 1),
-              _buildListItem(
-                title: 'Scheduled Reminders',
-                subtitle: '$_scheduledNotificationsCount active',
-                trailing: TextButton(
-                  onPressed: () async {
-                    await _loadScheduledNotificationsCount();
-                    if (!mounted) return;
-                    final pending = await NotificationService().getPendingNotifications();
-                    if (!mounted) return;
-                    _showPendingNotificationsDialog(pending);
-                  },
-                  child: const Text('View'),
-                ),
-              ),
-              const Divider(height: 1),
-              _buildListItem(
-                title: 'Test Notification',
-                subtitle: 'Send a test notification now',
-                trailing: TextButton(
-                  onPressed: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    await NotificationService().showTestNotification();
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('Test notification sent')),
-                    );
-                  },
-                  child: const Text('Test'),
-                ),
-              ),
-              const Divider(height: 1),
-              _buildListItem(
-                title: 'Schedule Test',
-                subtitle: 'Schedule notification in 10 seconds',
-                trailing: TextButton(
-                  onPressed: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    await NotificationService().scheduleTestNotification();
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Test notification scheduled for 10 seconds'),
-                      ),
-                    );
-                    await _loadScheduledNotificationsCount();
-                  },
-                  child: const Text('Schedule'),
                 ),
               ),
             ],
@@ -597,36 +540,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
           );
         }).toList(),
-      ),
-    );
-  }
-
-  void _showPendingNotificationsDialog(List<PendingNotificationRequest> pending) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Scheduled Notifications'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: pending.isEmpty
-              ? const Text('No scheduled notifications')
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: pending.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(pending[index].title ?? 'Notification'),
-                      subtitle: Text(pending[index].body ?? ''),
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }
