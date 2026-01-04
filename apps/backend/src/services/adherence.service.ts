@@ -46,7 +46,7 @@ export class AdherenceService {
     private adherenceRepo: AdherenceRepository,
     private medicationRepo: MedicationRepository,
     private scheduleRepo: ScheduleRepository
-  ) {}
+  ) { }
 
   async logAdherence(userId: string, input: LogAdherenceInput): Promise<AdherenceEntity> {
     const schedule = await this.scheduleRepo.findById(input.scheduleId);
@@ -231,12 +231,22 @@ export class AdherenceService {
   async markMissedReminders(cutoffHours: number = 4): Promise<number> {
     const cutoffTime = new Date(Date.now() - cutoffHours * 60 * 60 * 1000);
     const count = await this.adherenceRepo.markMissed(cutoffTime);
-    
+
     if (count > 0) {
       logger.info(`Marked ${count} reminders as missed (cutoff: ${cutoffTime.toISOString()})`);
     }
-    
+
     return count;
+  }
+
+  async wasRecentlyTaken(scheduleId: string, scheduledTime: Date): Promise<boolean> {
+    const record = await this.adherenceRepo.findByScheduledTime(scheduleId, scheduledTime);
+
+    if (!record) {
+      return false;
+    }
+
+    return record.status === AdherenceStatus.TAKEN;
   }
 
   async exportToCSV(userId: string, startDate: Date, endDate: Date): Promise<string> {
@@ -342,7 +352,7 @@ export function createAdherenceService(): AdherenceService {
   const { adherenceRepository } = require('../repositories/adherence.repository');
   const { medicationRepository } = require('../repositories/medication.repository');
   const { scheduleRepository } = require('../repositories/schedule.repository');
-  
+
   return new AdherenceService(adherenceRepository, medicationRepository, scheduleRepository);
 }
 

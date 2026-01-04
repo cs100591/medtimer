@@ -4,6 +4,9 @@ import { scheduleService } from './schedule.service';
 import { ScheduleEntity } from '../models/entities/Schedule.entity';
 import { EscalationLevel } from '../types/shared-types';
 import { logger } from '../utils/logger';
+import { adherenceService } from './adherence.service';
+import { medicationService } from './medication.service';
+import { notificationService } from './notification.service';
 
 export interface ReminderJob {
   scheduleId: string;
@@ -79,14 +82,14 @@ export class ReminderService {
 
   async scheduleReminder(schedule: ScheduleEntity): Promise<void> {
     const nextReminder = scheduleService.calculateNextReminder(schedule);
-    
+
     if (!nextReminder) {
       logger.debug(`No next reminder for schedule ${schedule.id}`);
       return;
     }
 
     const delay = nextReminder.getTime() - Date.now();
-    
+
     if (delay < 0) {
       logger.warn(`Reminder time is in the past for schedule ${schedule.id}`);
       return;
@@ -111,7 +114,7 @@ export class ReminderService {
 
   async cancelReminders(scheduleId: string): Promise<void> {
     const jobs = await this.reminderQueue.getJobs(['delayed', 'waiting']);
-    
+
     for (const job of jobs) {
       if (job.data.scheduleId === scheduleId) {
         await job.remove();
@@ -144,28 +147,44 @@ export class ReminderService {
   }
 
   private async sendNotification(data: ReminderJob): Promise<void> {
-    // This will be implemented by the notification service
     logger.info(`Sending ${data.escalationLevel} notification for medication ${data.medicationId}`);
-    
-    // Placeholder for actual notification sending
-    // await notificationService.send({
-    //   userId: data.userId,
-    //   type: 'reminder',
-    //   level: data.escalationLevel,
-    //   medicationId: data.medicationId,
-    //   scheduledTime: data.scheduledTime,
-    // });
+
+    try {
+      const medication = await medicationService.getMedication(data.medicationId, data.userId);
+
+      let templateId = 'MEDICATION_REMINDER';
+      if (data.escalationLevel !== EscalationLevel.GENTLE) {
+        templateId = 'MEDICATION_REMINDER_REPEAT';
+      }
+
+      const scheduledTime = data.scheduledTime instanceof Date
+        ? data.scheduledTime
+        : new Date(data.scheduledTime);
+
+      await notificationService.sendFromTemplate(
+        templateId,
+        data.userId,
+        {
+          medicationName: medication.name,
+          dosage: medication.dosageAmount.toString(),
+          dosageUnit: medication.dosageUnit,
+          scheduledTime: scheduledTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      );
+    } catch (error) {
+      logger.error(`Failed to send notification for schedule ${data.scheduleId}:`, error);
+    }
   }
 
   private async scheduleEscalation(data: ReminderJob): Promise<void> {
     try {
       const schedule = await scheduleService.getSchedule(data.scheduleId, data.userId);
       const escalationRules = schedule.getEscalationRules();
-      
+
       const currentRuleIndex = escalationRules.findIndex(
         r => r.level === data.escalationLevel
       );
-      
+
       if (currentRuleIndex === -1 || currentRuleIndex >= escalationRules.length - 1) {
         return; // No more escalation levels
       }
@@ -199,12 +218,14 @@ export class ReminderService {
   private async processEscalation(data: EscalationJob): Promise<void> {
     logger.info(`Processing escalation ${data.currentLevel} for schedule ${data.scheduleId}`);
 
-    // Check if medication was taken (would need adherence service)
-    // const wasTaken = await adherenceService.wasRecentlyTaken(data.medicationId, data.originalScheduledTime);
-    // if (wasTaken) {
-    //   logger.info(`Medication ${data.medicationId} was taken, skipping escalation`);
-    //   return;
-    // }
+    // Check if medication was taken
+    const scheduledTime = new Date(data.originalScheduledTime);
+    const wasTaken = await adherenceService.wasRecentlyTaken(data.scheduleId, scheduledTime);
+
+    if (wasTaken) {
+      logger.info(`Medication ${data.medicationId} was taken, skipping escalation`);
+      return;
+    }
 
     // Send escalated notification
     const reminderData: ReminderJob = {
