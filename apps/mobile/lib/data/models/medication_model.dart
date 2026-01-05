@@ -60,20 +60,11 @@ class MedicationModel {
     final times = <String>[];
     
     if (mode == '12h') {
-      // For 12h mode, spread doses evenly during waking hours (6AM to 10PM)
-      // Calculate interval based on frequency
-      final wakingHours = 16; // 6AM to 10PM = 16 hours
-      final intervalHours = wakingHours ~/ frequency;
-      
-      // Start from first dose time, but ensure it's reasonable
-      var startHour = firstHours;
-      if (startHour < 6) startHour = 6;
-      if (startHour > 22) startHour = 8; // Reset to morning if too late
+      // For 12h mode, spread doses evenly over 12 hours starting from first dose
+      final intervalHours = 12 ~/ frequency;
       
       for (var i = 0; i < frequency; i++) {
-        var hour = startHour + (intervalHours * i);
-        // Wrap around if needed, but cap at 22:00 (10PM)
-        if (hour > 22) hour = 22;
+        var hour = (firstHours + (intervalHours * i)) % 24;
         times.add(_formatTimeFromHourMinute(hour, minutes));
       }
     } else {

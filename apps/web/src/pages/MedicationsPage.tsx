@@ -15,9 +15,7 @@ function calculateScheduleTimes(firstTime: string, frequency: number, mode: Freq
   const intervalHours = Math.floor(totalHours / frequency);
   
   for (let i = 1; i < frequency; i++) {
-    let newHours = hours + (intervalHours * i);
-    if (mode === '12h' && newHours > 20) newHours = 20;
-    newHours = newHours % 24;
+    let newHours = (hours + (intervalHours * i)) % 24;
     const period = newHours >= 12 ? 'PM' : 'AM';
     const displayHours = newHours > 12 ? newHours - 12 : (newHours === 0 ? 12 : newHours);
     times.push(`${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`);
